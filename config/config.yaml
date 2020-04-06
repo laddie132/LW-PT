@@ -1,0 +1,28 @@
+# config file
+
+dataset:
+  data_path: data/rmsc.pickle
+  meta_data_path: data/rmsc.pickle.meta
+
+global:
+  random_seed: 123
+  num_data_workers: 16
+
+  max_sent_length: 20
+  max_sent_num: 40
+
+model:
+  embedding_dim: 100
+  hidden_size: 100
+  dropout_p: 0.2
+  layer_norm: false
+
+train:
+  num_epochs: 10
+  evaluate_freq: 100
+  save_steps: 1000
+
+  batch_size: 32
+  optimizer: adamax   # adam, sgd, adamax
+  learning_rate: 0.001
+  clip_grad_norm: 5
