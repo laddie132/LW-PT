@@ -1,6 +1,7 @@
 # config file
 
 dataset:
+  h5_path: data/rmsc.h5
   data_path: data/rmsc.pickle
   meta_data_path: data/rmsc.pickle.meta
 
@@ -10,6 +11,7 @@ global:
 
   max_sent_length: 20
   max_sent_num: 40
+  cand_doc_size: 32
 
 model:
   embedding_dim: 100
@@ -19,6 +21,9 @@ model:
 
 train:
   num_epochs: 10
+  train_iters: 5000
+  test_iters: 1000
+
   evaluate_freq: 100
   save_steps: 1000
 

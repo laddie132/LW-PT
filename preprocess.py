@@ -21,6 +21,8 @@ random_seed = 1
 
 
 class BaseDataset:
+    _compress_option = dict(compression="gzip", compression_opts=9, shuffle=False)
+
     def __init__(self, data_path):
         self.data_path = data_path
 
@@ -48,7 +50,9 @@ class RMSC(BaseDataset):
         self.emb_dim = 100
         self.max_sent = 40
         self.max_word = 20
+        self.h5_path = 'data/rmsc.h5'
 
+        self.attrs = {}
         self.songs = os.listdir(self.data_path)
         self.sorted_total_tags = []
         self.all_comments_list = []
@@ -66,7 +70,8 @@ class RMSC(BaseDataset):
         self.extract()
         self.train_emb()
         data, meta_data = self.transform()
-        self.save(data, meta_data)
+        # self.save(data, meta_data)
+        self.save_h5(data, meta_data)
 
     def extract(self):
         total_tags = []
@@ -87,9 +92,11 @@ class RMSC(BaseDataset):
                 self.total_song_comments_and_tags.append(every_song_comments_and_tags)  # all tags and comments
 
         print('Songs:', len(self.songs))
+        self.attrs['data_size'] = len(self.songs)
 
         self.sorted_total_tags = sorted(list(set(total_tags)))  # all tags
         print('Tags:', len(self.sorted_total_tags))
+        self.attrs['label_size'] = len(self.sorted_total_tags)
 
     def train_emb(self):
         print('training word2vec...')
@@ -139,7 +146,9 @@ class RMSC(BaseDataset):
                 list(map(self.tag_emb, self.total_song_comments_and_tags[i]["tags"])))
             labels_origin.append(every_song_comment_tags_embedding)
         del self.total_song_comments_and_tags
-        print("average comment length", sum_comment_count / (len_songs * self.max_sent))
+        ave_sent_length = sum_comment_count / (len_songs * self.max_sent)
+        print("average comment length", ave_sent_length)
+        self.attrs['ave_sent_length'] = ave_sent_length
         labels = MultiLabelBinarizer().fit_transform(labels_origin)
         del labels_origin
 
@@ -158,8 +167,11 @@ class RMSC(BaseDataset):
         # label_train, label_test_valid = train_test_split(labels, test_size=0.3, random_state=random_seed)
         # label_test, label_valid = train_test_split(label_test_valid, test_size=0.3, random_state=random_seed)
         print('train:', len(songs_train))
+        self.attrs['train_size'] = len(songs_train)
         print('valid:', len(songs_valid))
+        self.attrs['valid_size'] = len(songs_valid)
         print('test:', len(songs_test))
+        self.attrs['test_size'] = len(songs_test)
 
         data = {'x_train': x_train,
                 'x_valid': x_valid,
@@ -189,6 +201,31 @@ class RMSC(BaseDataset):
         print('saving meta-data...')
         with open('data/rmsc.pickle.meta', 'wb') as f:
             pickle.dump(meta_data, f)
+
+    def save_h5(self, data, meta_data):
+        print('saving hdf5 data...')
+        f = h5py.File(self.h5_path, 'w')
+        str_dt = h5py.special_dtype(vlen=str)
+
+        # attributes
+        for attr_name in self.attrs:
+            f.attrs[attr_name] = self.attrs[attr_name]
+
+        # meta_data
+        f_meta_data = f.create_group('meta_data')
+        for name, value in meta_data.items():
+            value = np.array(value, dtype=np.str)
+            meta_data = f_meta_data.create_dataset(name, value.shape, dtype=str_dt, **self._compress_option)
+            meta_data[...] = value
+
+        # data
+        f_data = f.create_group('data')
+        for name, value in data.items():
+            data = f_data.create_dataset(name, value.shape, dtype=value.dtype, **self._compress_option)
+            data[...] = value
+
+        f.flush()
+        f.close()
 
 
 if __name__ == '__main__':

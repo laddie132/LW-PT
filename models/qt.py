@@ -26,8 +26,7 @@ class DAQT(BaseModule):
         self.out_checkpoint_path = game_config['checkpoint']['out_qt_checkpoint_path']
         self.out_weight_path = game_config['checkpoint']['out_qt_weight_path']
 
-        self.model = DocRepQTTrainModel(game_config['model'],
-                                        embedding_path=game_config['dataset']['embedding_path'])
+        self.model = DocRepQTTrainModel(game_config['model'])
 
 
 class DocRepQTTrainModel(torch.nn.Module):
@@ -35,70 +34,38 @@ class DocRepQTTrainModel(torch.nn.Module):
     Documents representation model
     Args:
         model_config: config
-        embedding_path: embeddings data_path
     Inputs:
-        tar_d: (batch, doc_sent_len, doc_word_len)
-        cand_d: (batch, cand_doc_num, doc_sent_len, doc_word_len)
+        tar_d: (batch, doc_sent_len, doc_word_len, emb_dim)
+        cand_d: (batch, cand_doc_num, doc_sent_len, doc_word_len, emb_dim)
     Outputs:
         cand_d_prop: (batch, cand_doc_num)
     """
 
-    def __init__(self, model_config, embedding_path=None, embedding_freeze=True):
+    def __init__(self, model_config):
         super(DocRepQTTrainModel, self).__init__()
 
         self.model_config = model_config
 
-        embedding_num = model_config['embedding_num']
         embedding_dim = model_config['embedding_dim']
-
         self.hidden_size = model_config['hidden_size']
 
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
-        self.doc_hierarchical = model_config['doc_hierarchical']
-
-        if not model_config['use_glove']:
-            self.embedding_layer = torch.nn.Embedding(num_embeddings=embedding_num,
-                                                      embedding_dim=embedding_dim,
-                                                      padding_idx=Vocabulary.PAD_IDX)
-        else:
-            embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
-            logger.info('Embedding shape: ' + str(embedding_weight.shape))
-            self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
-                                                                      freeze=embedding_freeze,
-                                                                      padding_idx=Vocabulary.PAD_IDX)
 
         self.tar_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
         self.cand_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
 
-    def forward(self, tar_d, cand_ds):
-        tar_d, _ = del_zeros_right(tar_d)
-        cand_ds, _ = del_zeros_right(cand_ds)
-
-        if self.doc_hierarchical:
-            _, sent_right_idx = del_zeros_right(tar_d.sum(-1))
-            tar_d = tar_d[:, :sent_right_idx, :]
-
-            _, sent_right_idx = del_zeros_right(cand_ds.sum(-1))
-            cand_ds = cand_ds[:, :, :sent_right_idx, :]
-
-        # embedding layer
-        tar_doc_emb = self.embedding_layer(tar_d)
-        tar_doc_mask = compute_mask(tar_d)
-
-        cand_docs_emb = self.embedding_layer(cand_ds)
-        cand_docs_mask = compute_mask(cand_ds)
-
+    def forward(self, tar_d, tar_mask, cand_ds, cand_mask, label):
         # target document encoder layer
-        tar_doc_rep, _ = self.tar_doc_encoder(tar_doc_emb, tar_doc_mask)
+        tar_doc_rep, _ = self.tar_doc_encoder(tar_d, tar_mask)
 
         # candidate documents encoder layer
-        batch, cand_doc_num = cand_docs_emb.size(0), cand_docs_emb.size(1)
-        new_size = [batch * cand_doc_num] + list(cand_docs_emb.shape[2:])
-        cand_docs_emb_flip = cand_docs_emb.view(*new_size)
+        batch, cand_doc_num = cand_ds.size(0), cand_ds.size(1)
+        new_size = [batch * cand_doc_num] + list(cand_ds.shape[2:])
+        cand_docs_emb_flip = cand_ds.view(*new_size)
 
         new_size = [batch * cand_doc_num] + list(cand_ds.shape[2:])
-        cand_docs_mask_flip = cand_docs_mask.view(*new_size)
+        cand_docs_mask_flip = cand_ds.view(*new_size)
 
         cand_docs_rep_flip, _ = self.cand_doc_encoder(cand_docs_emb_flip, cand_docs_mask_flip)
         cand_docs_rep = cand_docs_rep_flip.contiguous().view(batch, cand_doc_num, -1)
@@ -116,36 +83,23 @@ class DocRepQTTestModel(torch.nn.Module):
     Documents representation out model
     Args:
         model_config: config
-        embedding_path: embeddings data_path
     Inputs:
         doc: (batch, doc_sent_len, doc_word_len)
     Outputs:
         document_rep: (batch, hidden_size * 4)
     """
 
-    def __init__(self, model_config, embedding_path=None, embedding_freeze=True):
+    def __init__(self, model_config):
         super(DocRepQTTestModel, self).__init__()
 
         self.model_config = model_config
 
-        embedding_num = model_config['embedding_num']
         embedding_dim = model_config['embedding_dim']
 
         self.hidden_size = model_config['hidden_size']
 
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
-
-        if not model_config['use_glove']:
-            self.embedding_layer = torch.nn.Embedding(num_embeddings=embedding_num,
-                                                      embedding_dim=embedding_dim,
-                                                      padding_idx=Vocabulary.PAD_IDX)
-        else:
-            embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
-            logger.info('Embedding shape: ' + str(embedding_weight.shape))
-            self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
-                                                                      freeze=embedding_freeze,
-                                                                      padding_idx=Vocabulary.PAD_IDX)
 
         self.tar_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
         self.cand_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)

@@ -203,6 +203,22 @@ def sequence_mask(lengths, max_len=None):
     return mask
 
 
+def hierarchical_sequence_mask(lengths):
+    """
+    Creates a boolean mask from hierarchical sequence lengths.
+    """
+    batch, s = lengths.size()
+    mask = sequence_mask(lengths.view(-1), max_len=None)
+    mask = mask.view(batch, s, -1)
+
+    # top layer mask
+    top_mask = compute_top_layer_mask(mask)
+    _, max_s_len = del_zeros_right(top_mask)
+
+    mask = mask[:, :max_s_len, :]
+    return mask
+
+
 def masked_softmax(x, m=None, dim=-1):
     """
     Softmax with mask

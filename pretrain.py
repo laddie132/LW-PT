@@ -10,9 +10,11 @@ import torch.nn
 import logging
 from tqdm import tqdm
 from models import DAQT
-from datareaders import RMSC
+from datareaders import QTReader
 from utils.functions import get_optimizer
 from utils.config import init_logging, init_env
+from utils.metrics import evaluate_acc
+from pytorch_memlab import MemReporter
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,15 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
     game_config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
                                                         writer_suffix='qt_log_path')
     logger.info('reading dataset...')
-    dataset = RMSC(game_config)
+    dataset = QTReader(game_config)
 
     logger.info('constructing model...')
     model = DAQT(game_config).to(device)
     model.load_parameters(enable_cuda)
+
+    # debug: show using memory
+    # reporter = MemReporter(model)
+    # reporter.report()
 
     # loss function
     criterion = torch.nn.NLLLoss()
@@ -35,55 +41,94 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                               game_config['train']['learning_rate'],
                               model.parameters())
 
-    # training arguments
-    batch_size = game_config['train']['batch_size']
-    num_workers = game_config['global']['num_data_workers']
-
     # dataset loader
-    batch_train_data = dataset.get_dataloader_train(batch_size, num_workers)
-    batch_test_data = dataset.get_dataloader_test(batch_size, num_workers)
+    batch_train_data = dataset.get_dataloader_train()
+    batch_test_data = dataset.get_dataloader_test()
 
     if is_train:
         logger.info('start training...')
 
         clip_grad_max = game_config['train']['clip_grad_norm']
-        num_epochs = game_config['train']['num_epochs']
         save_steps = game_config['train']['save_steps']
 
         # train
         model.train()  # set training = True, make sure right dropout
-        for epoch in range(num_epochs):
-            train_on_model(epoch=epoch,
-                           model=model,
-                           criterion=criterion,
-                           optimizer=optimizer,
-                           batch_data=batch_train_data,
-                           clip_grad_max=clip_grad_max,
-                           device=device,
-                           writer=writer,
-                           save_steps=save_steps)
+        train_on_model(model=model,
+                       criterion=criterion,
+                       optimizer=optimizer,
+                       dataloader=batch_train_data,
+                       clip_grad_max=clip_grad_max,
+                       device=device,
+                       writer=writer,
+                       save_steps=save_steps)
 
     if is_test:
         logger.info('start testing...')
 
         with torch.no_grad():
             model.eval()
-            metrics = eval_on_model(model=model,
-                                    batch_data=batch_test_data,
-                                    device=device)
-        logger.info("Acc=%.3f, P_1=%.3f, P_3=%.3f, MAP=%.3f" %
-                    (metrics['docs_acc'], metrics['top_p1'], metrics['top_p2'], metrics['map']))
+            test_acc = eval_on_model(model=model,
+                                     dataloader=batch_test_data,
+                                     device=device)
+        logger.info("test_all_acc=%.2f%%" % (test_acc * 100))
 
     writer.close()
     logger.info('finished.')
 
 
-def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max, device, writer, save_steps):
-    pass
+def train_on_model(model, criterion, optimizer, dataloader, clip_grad_max, device, writer, save_steps):
+    num_iters = len(dataloader)
+    for step_i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc='Training...'):
+        step_i += 1
+        optimizer.zero_grad()
+
+        # batch data
+        batch = [x.to(device) if x is not None else x for x in batch]
+        cls_truth = batch[-1]
+        batch_input = batch[:-1]
+
+        # forward
+        cls_predict = model.forward(*batch_input)
+
+        loss = criterion(cls_predict, cls_truth)
+        loss.backward()
+
+        # evaluate
+        batch_acc, batch_eq_num = evaluate_acc(cls_predict, cls_truth)
+
+        torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
+        optimizer.step()  # update parameters
+
+        # logging
+        batch_loss = loss.item()
+        writer.add_scalar('Train-Step-Loss', batch_loss, global_step=step_i)
+        writer.add_scalar('Train-Step-Acc', batch_acc, global_step=step_i)
+
+        if step_i % save_steps == 0 or step_i == num_iters:
+            logger.debug('Steps %d: loss=%.5f, acc=%.2f%%' % (step_i, batch_loss, batch_acc * 100))
+            model.save_parameters(step_i)
 
 
-def eval_on_model(model, batch_data, device):
-    pass
+def eval_on_model(model, dataloader, device):
+    eq_num = 0
+    all_num = 0
+
+    for batch in tqdm(dataloader, desc='Testing...'):
+        # batch data
+        batch = [x.to(device) if x is not None else x for x in batch]
+        cls_truth = batch[-1]
+        batch_input = batch[:-1]
+
+        # forward
+        cls_predict = model.forward(*batch_input)
+        batch_acc, batch_eq_num = evaluate_acc(cls_predict, cls_truth)
+
+        batch_num = cls_truth.shape[0]
+        eq_num += batch_eq_num
+        all_num += batch_num
+
+    acc = eq_num / all_num
+    return acc
 
 
 if __name__ == '__main__':

@@ -1,1 +1,1 @@
-from .rmsc import RMSC
+from .qt_reader import QTReader
