@@ -41,7 +41,7 @@ def init_env(config_path, in_infix, out_infix, writer_suffix):
     return game_config, enable_cuda, device, writer
 
 
-def init_logging(config_path='config/logging_config.yaml', out_infix='default'):
+def init_logging(config_path='config/logging.yaml', out_infix='default'):
     """
     initial logging module with config
     :param out_infix:
@@ -66,7 +66,7 @@ def init_logging(config_path='config/logging_config.yaml', out_infix='default'):
         logging.basicConfig(level=logging.DEBUG)
 
 
-def read_config(config_path='config/game_config.yaml', in_infix='default', out_infix='default'):
+def read_config(config_path='config/config.yaml', in_infix='default', out_infix='default'):
     """
     store the global parameters in the project
     :param in_infix:

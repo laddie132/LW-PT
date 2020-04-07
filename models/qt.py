@@ -7,26 +7,35 @@ __email__ = "liuhan132@foxmail.com"
 """DA-QT Module"""
 
 import logging
-import numpy as np
 from .base import BaseModule
 from .layers import *
-from utils.functions import compute_mask, del_zeros_right, compute_top_layer_mask
+from utils.functions import compute_top_layer_mask
 
 logger = logging.getLogger(__name__)
 
 
 class DAQT(BaseModule):
-    def __init__(self, game_config):
+    def __init__(self, config):
         super(DAQT, self).__init__()
-        self.game_config = game_config
         self.name = 'qt'
 
-        self.in_checkpoint_path = game_config['checkpoint']['in_qt_checkpoint_path']
-        self.in_weight_path = game_config['checkpoint']['in_qt_weight_path']
-        self.out_checkpoint_path = game_config['checkpoint']['out_qt_checkpoint_path']
-        self.out_weight_path = game_config['checkpoint']['out_qt_weight_path']
+        self.in_checkpoint_path = config['checkpoint']['in_qt_checkpoint_path']
+        self.in_weight_path = config['checkpoint']['in_qt_weight_path']
+        self.out_checkpoint_path = config['checkpoint']['out_qt_checkpoint_path']
+        self.out_weight_path = config['checkpoint']['out_qt_weight_path']
 
-        self.model = DocRepQTTrainModel(game_config['model'])
+        self.model = DocRepQTTrainModel(config['model'])
+
+
+class DAQTRep(BaseModule):
+    def __init__(self, config):
+        super(DAQTRep, self).__init__()
+        self.name = 'qt'
+
+        self.in_checkpoint_path = config['checkpoint']['in_qt_checkpoint_path']
+        self.in_weight_path = config['checkpoint']['in_qt_weight_path']
+
+        self.model = DocRepQTTestModel(config['model'])
 
 
 class DocRepQTTrainModel(torch.nn.Module):
@@ -43,31 +52,25 @@ class DocRepQTTrainModel(torch.nn.Module):
 
     def __init__(self, model_config):
         super(DocRepQTTrainModel, self).__init__()
-
-        self.model_config = model_config
-
-        embedding_dim = model_config['embedding_dim']
-        self.hidden_size = model_config['hidden_size']
-
-        dropout_p = model_config['dropout_p']
-        enable_layer_norm = model_config['layer_norm']
-
-        self.tar_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
-        self.cand_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
+        self.tar_doc_encoder = DocRepQTEncoder(model_config)
+        self.cand_doc_encoder = DocRepQTEncoder(model_config)
 
     def forward(self, tar_d, tar_mask, cand_ds, cand_mask, label):
         # target document encoder layer
-        tar_doc_rep, _ = self.tar_doc_encoder(tar_d, tar_mask)
+        tar_doc_rep, _ = self.tar_doc_encoder(tar_d, tar_mask, label)
 
         # candidate documents encoder layer
         batch, cand_doc_num = cand_ds.size(0), cand_ds.size(1)
         new_size = [batch * cand_doc_num] + list(cand_ds.shape[2:])
         cand_docs_emb_flip = cand_ds.view(*new_size)
 
-        new_size = [batch * cand_doc_num] + list(cand_ds.shape[2:])
-        cand_docs_mask_flip = cand_ds.view(*new_size)
+        new_size = [batch * cand_doc_num] + list(cand_mask.shape[2:])
+        cand_docs_mask_flip = cand_mask.view(*new_size)
 
-        cand_docs_rep_flip, _ = self.cand_doc_encoder(cand_docs_emb_flip, cand_docs_mask_flip)
+        cand_label = label.unsqueeze(1).expand(batch, cand_doc_num, -1).contiguous()
+        cand_label = cand_label.view(batch * cand_doc_num, -1)
+
+        cand_docs_rep_flip, _ = self.cand_doc_encoder(cand_docs_emb_flip, cand_docs_mask_flip, cand_label)
         cand_docs_rep = cand_docs_rep_flip.contiguous().view(batch, cand_doc_num, -1)
 
         # output layer
@@ -86,39 +89,31 @@ class DocRepQTTestModel(torch.nn.Module):
     Inputs:
         doc: (batch, doc_sent_len, doc_word_len)
     Outputs:
-        document_rep: (batch, hidden_size * 4)
+        document_rep: (batch, label_size, hidden_size * 4)
     """
 
     def __init__(self, model_config):
         super(DocRepQTTestModel, self).__init__()
+        self.label_size = model_config['label_size']
+        self.tar_doc_encoder = DocRepQTEncoder(model_config)
+        self.cand_doc_encoder = DocRepQTEncoder(model_config)
 
-        self.model_config = model_config
+    def forward(self, doc, doc_mask):
+        batch = doc.size(0)
+        doc_rep = []
 
-        embedding_dim = model_config['embedding_dim']
+        for i in range(self.label_size):
+            cur_label = doc.new_zeros(batch, self.label_size)
+            cur_label[:, i] = 1
 
-        self.hidden_size = model_config['hidden_size']
+            # doc encoder layer
+            tar_doc_rep, _ = self.tar_doc_encoder(doc, doc_mask, cur_label)
+            cand_doc_rep, _ = self.cand_doc_encoder(doc, doc_mask, cur_label)
 
-        dropout_p = model_config['dropout_p']
-        enable_layer_norm = model_config['layer_norm']
-
-        self.tar_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
-        self.cand_doc_encoder = DocRepQTEncoder(embedding_dim, self.hidden_size, dropout_p, enable_layer_norm)
-
-    def forward(self, doc):
-        doc, _ = del_zeros_right(doc)
-        _, sent_right_idx = del_zeros_right(doc.sum(-1))
-        doc = doc[:, :sent_right_idx, :]
-
-        # embedding layer
-        doc_emb = self.embedding_layer(doc)
-        doc_mask = compute_mask(doc)
-
-        # doc encoder layer
-        tar_doc_rep, _ = self.tar_doc_encoder(doc_emb, doc_mask)
-        cand_doc_rep, _ = self.cand_doc_encoder(doc_emb, doc_mask)
-
-        # doc representation
-        doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
+            # doc representation
+            cur_doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
+            doc_rep.append(cur_doc_rep)
+        doc_rep = torch.stack(doc_rep, dim=1)
 
         return doc_rep
 
@@ -133,44 +128,53 @@ class DocRepQTEncoder(torch.nn.Module):
         doc_rep: (batch, hidden_size * 2)
     """
 
-    def __init__(self, embedding_dim, hidden_size, dropout_p, enable_layer_norm):
+    def __init__(self, model_config):
         super(DocRepQTEncoder, self).__init__()
 
-        self.hidden_size = hidden_size
+        embedding_dim = model_config['embedding_dim']
+        hidden_size = model_config['hidden_size']
+        label_size = model_config['label_size']
+        dropout_p = model_config['dropout_p']
+        enable_layer_norm = model_config['layer_norm']
 
         self.dropout_layer = torch.nn.Dropout(p=dropout_p)
         self.doc_word_rnn = MyRNNBase(mode='GRU',
                                       input_size=embedding_dim,
-                                      hidden_size=self.hidden_size,
+                                      hidden_size=hidden_size,
                                       bidirectional=True,
                                       dropout_p=dropout_p,
                                       enable_layer_norm=enable_layer_norm,
                                       batch_first=True,
                                       num_layers=1)
-        self.doc_word_attention = SelfAttention(hidden_size=self.hidden_size * 2)
+        self.doc_word_attention = MultiHeadSelfAttention(in_features=hidden_size * 2,
+                                                         labels=label_size)
 
         self.doc_sentence_rnn = MyRNNBase(mode='GRU',
-                                          input_size=self.hidden_size * 2,
-                                          hidden_size=self.hidden_size,
+                                          input_size=hidden_size * 2,
+                                          hidden_size=hidden_size,
                                           bidirectional=True,
                                           dropout_p=dropout_p,
                                           enable_layer_norm=enable_layer_norm,
                                           batch_first=True,
                                           num_layers=1)
-        self.doc_sentence_attention = SelfAttention(hidden_size=self.hidden_size * 2)
+        self.doc_sentence_attention = MultiHeadSelfAttention(in_features=hidden_size * 2,
+                                                             labels=label_size)
 
-    def forward(self, doc_emb, doc_mask):
+    def forward(self, doc_emb, doc_mask, label):
         visual_parm = {}
         batch, doc_sent_len, doc_word_len, _ = doc_emb.size()
 
         doc_word_emb = doc_emb.view(batch * doc_sent_len, doc_word_len, -1)
         doc_word_mask = doc_mask.view(batch * doc_sent_len, doc_word_len)
 
+        word_level_label = label.unsqueeze(1).expand(batch, doc_sent_len, -1).contiguous()
+        word_level_label = word_level_label.view(batch * doc_sent_len, -1)
+
         # (batch * doc_sent_len, doc_word_len, hidden_size * 2)
         doc_word_rep, _ = self.doc_word_rnn(doc_word_emb, doc_word_mask)
 
         # (batch * doc_sent_len, hidden_size * 2)
-        doc_sent_emb, doc_word_att_p = self.doc_word_attention(doc_word_rep, doc_word_mask)
+        doc_sent_emb, doc_word_att_p = self.doc_word_attention(doc_word_rep, word_level_label, doc_word_mask)
         visual_parm['doc_word_att_p'] = doc_word_att_p
 
         # (batch, doc_sent_len, hidden_size * 2)
@@ -181,7 +185,7 @@ class DocRepQTEncoder(torch.nn.Module):
         doc_sent_rep, _ = self.doc_sentence_rnn(doc_sent_emb, doc_sent_mask)
 
         # (batch, hidden_size * 2)
-        doc_rep, doc_sent_att_p = self.doc_sentence_attention(doc_sent_rep, doc_sent_mask)
+        doc_rep, doc_sent_att_p = self.doc_sentence_attention(doc_sent_rep, label, doc_sent_mask)
         visual_parm['doc_sent_att_p'] = doc_sent_att_p
 
         return doc_rep, visual_parm

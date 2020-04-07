@@ -14,7 +14,7 @@ from datareaders import QTReader
 from utils.functions import get_optimizer
 from utils.config import init_logging, init_env
 from utils.metrics import evaluate_acc
-from pytorch_memlab import MemReporter
+# from pytorch_memlab import MemReporter
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 def main(config_path, in_infix, out_infix, is_train, is_test):
     logger.info('-------------DA-QT Pre-Training---------------')
     logger.info('initial environment...')
-    game_config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                        writer_suffix='qt_log_path')
+    config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
+                                                   writer_suffix='qt_log_path')
     logger.info('reading dataset...')
-    dataset = QTReader(game_config)
+    dataset = QTReader(config)
 
     logger.info('constructing model...')
-    model = DAQT(game_config).to(device)
+    model = DAQT(config).to(device)
     model.load_parameters(enable_cuda)
 
     # debug: show using memory
@@ -37,8 +37,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
     # loss function
     criterion = torch.nn.NLLLoss()
-    optimizer = get_optimizer(game_config['train']['optimizer'],
-                              game_config['train']['learning_rate'],
+    optimizer = get_optimizer(config['train']['optimizer'],
+                              config['train']['learning_rate'],
                               model.parameters())
 
     # dataset loader
@@ -48,8 +48,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
     if is_train:
         logger.info('start training...')
 
-        clip_grad_max = game_config['train']['clip_grad_norm']
-        save_steps = game_config['train']['save_steps']
+        clip_grad_max = config['train']['clip_grad_norm']
+        save_steps = config['train']['save_steps']
 
         # train
         model.train()  # set training = True, make sure right dropout
@@ -140,4 +140,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main('config/game_config.yaml', args.in_infix, args.out, is_train=args.train, is_test=args.test)
+    main('config/config.yaml', args.in_infix, args.out, is_train=args.train, is_test=args.test)

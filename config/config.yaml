@@ -4,6 +4,7 @@ dataset:
   h5_path: data/rmsc.h5
   data_path: data/rmsc.pickle
   meta_data_path: data/rmsc.pickle.meta
+  doc_rep_path: data/rmsc_doc_qt_rep.pt
 
 global:
   random_seed: 123
@@ -11,11 +12,12 @@ global:
 
   max_sent_length: 20
   max_sent_num: 40
-  cand_doc_size: 32
+  cand_doc_size: 4
 
 model:
   embedding_dim: 100
   hidden_size: 100
+  label_size: 22
   dropout_p: 0.2
   layer_norm: false
 

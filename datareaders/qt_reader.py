@@ -31,8 +31,8 @@ class QTReader:
 
         self.load_data()
 
-    def load_data(self):
-        h5_path = self.config['data']['h5_path']
+    def load_h5_data(self):
+        h5_path = self.config['dataset']['h5_path']
         with h5py.File(h5_path, 'r') as f:
             f_data = f['data']
             for name, value in f_data.items():
@@ -41,6 +41,12 @@ class QTReader:
             # f_meta_data = f['meta_data']
             # for name, value in f_meta_data.items():
             #     self.meta_data[name] = np.array[value]
+
+    def load_data(self):
+        with open(self.config['dataset']['data_path'], 'rb') as f:
+            data = pickle.load(f)
+        for name, value in data.items():
+            self.data[name] = torch.tensor(value)
 
     def get_dataloader_train(self):
         return self._get_dataloader(self.train_iters)
@@ -129,10 +135,10 @@ class QTDataset(torch.utils.data.Dataset):
             qt_label.append(ele[4])
             gt_idx.append(ele[5])
 
-        cur_doc = torch.stack(cur_doc, dim=0)
-        cur_len = torch.stack(cur_len, dim=0)
-        cand_docs = torch.stack(cand_docs, dim=0)
-        cand_len = torch.stack(cand_len, dim=0)
+        cur_doc = torch.stack(cur_doc, dim=0).float()
+        cur_len = torch.stack(cur_len, dim=0).long()
+        cand_docs = torch.stack(cand_docs, dim=0).float()
+        cand_len = torch.stack(cand_len, dim=0).long()
         qt_label = torch.stack(qt_label, dim=0)
         gt_idx = torch.tensor(gt_idx, dtype=torch.long)
 
@@ -149,5 +155,9 @@ class QTDataset(torch.utils.data.Dataset):
         _, sent_num, sent_len = cand_mask.size()
         cand_mask = cand_mask.view(batch, cand_size, sent_num, sent_len)
         cand_docs = cand_docs[:, :, :sent_num, :sent_len, :]
+
+        # logger.info('tar_d: {}, {}'.format(cur_doc.dtype, cur_doc.shape))
+        # logger.info('cand_ds: {}, {}'.format(cand_docs.dtype, cand_docs.shape))
+        # logger.info('label: {}, {}'.format(qt_label.dtype, qt_label.shape))
 
         return cur_doc, cur_mask, cand_docs, cand_mask, qt_label, gt_idx

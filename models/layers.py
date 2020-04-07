@@ -9,6 +9,9 @@ __email__ = "liuhan132@foxmail.com"
 import math
 import torch
 import torch.nn
+import torch.nn.init as init
+from torch.nn.parameter import Parameter
+from torch.nn import functional as F
 from utils.functions import masked_softmax, compute_top_layer_mask
 
 
@@ -107,6 +110,52 @@ class SelfAttention(torch.nn.Module):
     def forward(self, x, x_mask=None):
         x_alpha = self.alpha_linear(x) \
             .squeeze(-1)  # (batch, len)
+
+        x_prop = masked_softmax(x_alpha, x_mask, dim=-1)
+        x_att_rep = torch.bmm(x_prop.unsqueeze(1), x) \
+            .squeeze(1)  # (batch, hidden_size)
+
+        return x_att_rep, x_prop
+
+
+class MultiHeadSelfAttention(torch.nn.Module):
+    """
+    Self Attention layer with multi-head
+    Args:
+        in_features: hidden size
+    Inputs:
+        x: (batch, len, hidden_size)
+        x_mask: (batch, len)
+    Outputs:
+        x_att_rep: (batch, hidden_size)
+        x_prop: (batch, len)
+    """
+
+    def __init__(self, in_features, labels, bias=True):
+        super(MultiHeadSelfAttention, self).__init__()
+        self.weight = Parameter(torch.Tensor(labels, in_features))
+        if bias:
+            self.bias = Parameter(torch.Tensor(labels))
+        else:
+            self.register_parameter('bias', None)
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x, label, x_mask=None):
+        cur_weight = torch.mm(label.float(), self.weight).unsqueeze(-1)     # (batch, in_features, 1)
+        cur_bias = None
+        if self.bias is not None:
+            cur_bias = torch.mm(label.float(), self.bias.unsqueeze(-1))     # (batch, 1)
+
+        x_alpha = torch.bmm(x, cur_weight).squeeze(-1)      # (batch, len)
+        if cur_bias is not None:
+            x_alpha += cur_bias
 
         x_prop = masked_softmax(x_alpha, x_mask, dim=-1)
         x_att_rep = torch.bmm(x_prop.unsqueeze(1), x) \

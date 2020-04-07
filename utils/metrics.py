@@ -36,3 +36,11 @@ def evaluate_acc_sigmoid(predict, truth):
     batch_acc = batch_eq_num / truth.shape[0]
 
     return batch_acc, batch_eq_num
+
+
+def evaluate_macro_f1(predict, truth):
+    pass
+
+
+def evaluate_micro_f1(predict, truth):
+    pass

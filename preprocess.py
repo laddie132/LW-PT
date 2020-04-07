@@ -70,8 +70,8 @@ class RMSC(BaseDataset):
         self.extract()
         self.train_emb()
         data, meta_data = self.transform()
-        # self.save(data, meta_data)
-        self.save_h5(data, meta_data)
+        self.save(data, meta_data)
+        # self.save_h5(data, meta_data)
 
     def extract(self):
         total_tags = []
