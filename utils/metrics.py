@@ -7,6 +7,8 @@ __email__ = "liuhan132@foxmail.com"
 import torch
 import torch.nn
 
+eps = 1e-7
+
 
 def evaluate_acc(predict, truth):
     """
@@ -38,9 +40,44 @@ def evaluate_acc_sigmoid(predict, truth):
     return batch_acc, batch_eq_num
 
 
-def evaluate_macro_f1(predict, truth):
-    pass
+def evaluate_f1_ml(predict, truth):
+    """
+    F1-score for multi-label classification
+    :param predict: (batch, labels)
+    :param truth: (batch, labels)
+    :return:
+    """
+    label_same = []
+    label_predict = []
+    label_truth = []
+    label_f1 = []
 
+    division = lambda x, y: (x * 1.0 / y) if y else 0
+    f1 = lambda p, r: 2 * p * r / (p + r) if p + r else 0
 
-def evaluate_micro_f1(predict, truth):
-    pass
+    batch, label_size = predict.size()
+    for i in range(label_size):
+        cur_predict = predict[:, i]
+        cur_truth = truth[:, i]
+
+        predict_max = cur_predict.gt(0.5).long()
+        cur_eq_num = (predict_max * cur_truth).sum().item()
+
+        cur_predict_num = predict_max.sum().item()
+        cur_truth_num = cur_truth.sum().item()
+
+        cur_precision = division(cur_eq_num, cur_predict_num)
+        cur_recall = division(cur_eq_num, cur_truth_num)
+        cur_f1 = f1(cur_precision, cur_recall)
+
+        label_same.append(cur_eq_num)
+        label_predict.append(cur_predict_num)
+        label_truth.append(cur_truth_num)
+        label_f1.append(cur_f1)
+
+    macro_f1 = sum(label_f1) / len(label_f1)
+    micro_precision = division(sum(label_same), sum(label_predict))
+    micro_recall = division(sum(label_same), sum(label_truth))
+    micro_f1 = f1(micro_precision, micro_recall)
+
+    return macro_f1, micro_f1

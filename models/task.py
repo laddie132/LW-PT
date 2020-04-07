@@ -31,8 +31,10 @@ class MultiCls(BaseModule):
         :return:
         """
         y_pred_log = torch.log(y_pred)
+        non_y_pred_log = torch.log(1 - y_pred)
         valid_docs_prob_log = y_pred_log * y_true.float()
-        batch_loss = -valid_docs_prob_log.sum(dim=-1)
+        non_docs_prob_log = non_y_pred_log * (1 - y_true).float()
+        batch_loss = -valid_docs_prob_log.sum(dim=-1) - non_docs_prob_log.sum(dim=-1)
 
         if reduction == 'none':
             return batch_loss
@@ -49,8 +51,11 @@ class MultiClsModel(torch.nn.Module):
         super(MultiClsModel, self).__init__()
         hidden_size = model_config['hidden_size']
         label_size = model_config['label_size']
+        # dropout_p = model_config['dropout_p']
 
+        # self.dropout = torch.nn.Dropout(dropout_p)
         self.cls_layer = torch.nn.Linear(hidden_size * 4 * label_size, label_size)
 
     def forward(self, doc_rep):
+        # doc_rep = self.dropout(doc_rep)
         return torch.sigmoid(self.cls_layer(doc_rep))

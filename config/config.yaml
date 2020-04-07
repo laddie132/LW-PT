@@ -22,8 +22,8 @@ model:
   layer_norm: false
 
 train:
-  num_epochs: 10
-  train_iters: 5000
+  num_epochs: 50
+  train_iters: 50000
   test_iters: 1000
 
   evaluate_freq: 100

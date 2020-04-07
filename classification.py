@@ -15,7 +15,7 @@ import logging
 from models import MultiCls
 from datareaders import DocClsReader
 from utils.functions import get_optimizer
-from utils.metrics import evaluate_micro_f1, evaluate_macro_f1
+from utils.metrics import evaluate_f1_ml
 from utils.config import init_logging, init_env
 
 logger = logging.getLogger(__name__)
@@ -106,8 +106,7 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         loss.backward()
 
         # evaluate
-        macro_f1 = evaluate_macro_f1(predict, truth)
-        micro_f1 = evaluate_micro_f1(predict, truth)
+        macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
         optimizer.step()  # update parameters
@@ -123,21 +122,24 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
 
 def eval_on_model(model, batch_data, device):
     batch_cnt = len(batch_data)
-    micro_f1 = []
-    macro_f1 = []
+    all_predict = []
+    all_truth = []
 
     for i, batch in tqdm(enumerate(batch_data), total=batch_cnt, desc='Testing...'):
         # batch data
         batch = [x.to(device) if x is not None else x for x in batch]
         truth = batch[-1]
+        all_truth.append(truth)
+
         batch_input = batch[:-1]
 
         # forward
         predict = model.forward(*batch_input)
+        all_predict.append(predict)
 
-        # evaluate
-        macro_f1 = evaluate_macro_f1(predict, truth)
-        micro_f1 = evaluate_micro_f1(predict, truth)
+    predict = torch.cat(all_predict, dim=0)
+    truth = torch.cat(all_truth, dim=0)
+    macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
 
     metrics = {'macro_f1': macro_f1,
                'micro_f1': micro_f1}

@@ -42,13 +42,13 @@ class DocClsReader:
         return docs_rep
 
     def get_dataloader_train(self):
-        return self._get_dataloader(self.docs_rep['train'], self.data['y_train'], shuffle=True)
+        return self._get_dataloader(self.docs_rep['train_doc_rep'], self.data['y_train'], shuffle=True)
 
     def get_dataloader_valid(self):
-        return self._get_dataloader(self.docs_rep['valid'], self.data['y_valid'], shuffle=False)
+        return self._get_dataloader(self.docs_rep['valid_doc_rep'], self.data['y_valid'], shuffle=False)
 
     def get_dataloader_test(self):
-        return self._get_dataloader(self.docs_rep['test'], self.data['y_test'], shuffle=False)
+        return self._get_dataloader(self.docs_rep['test_doc_rep'], self.data['y_test'], shuffle=False)
 
     def _get_dataloader(self, docs_rep, label, shuffle):
         doc_dataset = DocClsDataset(docs_rep, label)
