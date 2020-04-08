@@ -22,11 +22,12 @@ model:
   layer_norm: false
 
 train:
-  num_epochs: 50
-  train_iters: 50000
+  num_epochs: 20
+  train_iters: 5000
+  valid_iters: 100
   test_iters: 1000
 
-  evaluate_freq: 100
+  eval_steps: 100
   save_steps: 1000
 
   batch_size: 32

@@ -14,7 +14,7 @@ from datareaders import QTReader
 from utils.functions import get_optimizer
 from utils.config import init_logging, init_env
 from utils.metrics import evaluate_acc
-# from pytorch_memlab import MemReporter
+from pytorch_memlab import MemReporter
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +43,14 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
     # dataset loader
     batch_train_data = dataset.get_dataloader_train()
-    batch_test_data = dataset.get_dataloader_test()
+    batch_valid_data = dataset.get_dataloader_valid()
 
     if is_train:
         logger.info('start training...')
 
         clip_grad_max = config['train']['clip_grad_norm']
         save_steps = config['train']['save_steps']
+        eval_steps = config['train']['eval_steps']
 
         # train
         model.train()  # set training = True, make sure right dropout
@@ -57,26 +58,29 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                        criterion=criterion,
                        optimizer=optimizer,
                        dataloader=batch_train_data,
+                       valid_dataloader=batch_valid_data,
                        clip_grad_max=clip_grad_max,
                        device=device,
                        writer=writer,
-                       save_steps=save_steps)
+                       save_steps=save_steps,
+                       eval_steps=eval_steps)
 
     if is_test:
         logger.info('start testing...')
 
         with torch.no_grad():
             model.eval()
-            test_acc = eval_on_model(model=model,
-                                     dataloader=batch_test_data,
-                                     device=device)
-        logger.info("test_all_acc=%.2f%%" % (test_acc * 100))
+            valid_acc = eval_on_model(model=model,
+                                      dataloader=batch_valid_data,
+                                      device=device)
+        logger.info("valid_acc=%.2f%%" % (valid_acc * 100))
 
     writer.close()
     logger.info('finished.')
 
 
-def train_on_model(model, criterion, optimizer, dataloader, clip_grad_max, device, writer, save_steps):
+def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
+                   clip_grad_max, device, writer, save_steps, eval_steps):
     num_iters = len(dataloader)
     for step_i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc='Training...'):
         step_i += 1
@@ -88,6 +92,7 @@ def train_on_model(model, criterion, optimizer, dataloader, clip_grad_max, devic
         batch_input = batch[:-1]
 
         # forward
+        model.train()
         cls_predict = model.forward(*batch_input)
 
         loss = criterion(cls_predict, cls_truth)
@@ -101,19 +106,28 @@ def train_on_model(model, criterion, optimizer, dataloader, clip_grad_max, devic
 
         # logging
         batch_loss = loss.item()
-        writer.add_scalar('Train-Step-Loss', batch_loss, global_step=step_i)
-        writer.add_scalar('Train-Step-Acc', batch_acc, global_step=step_i)
+        writer.add_scalar('Train-Loss', batch_loss, global_step=step_i)
+        writer.add_scalar('Train-Acc', batch_acc, global_step=step_i)
 
         if step_i % save_steps == 0 or step_i == num_iters:
             logger.debug('Steps %d: loss=%.5f, acc=%.2f%%' % (step_i, batch_loss, batch_acc * 100))
             model.save_parameters(step_i)
+
+        if step_i % eval_steps == 0 or step_i == num_iters:
+            with torch.no_grad():
+                model.eval()
+                valid_acc = eval_on_model(model=model,
+                                          dataloader=valid_dataloader,
+                                          device=device)
+            writer.add_scalar('Train-Valid-Acc', valid_acc, global_step=step_i)
+            logger.info("Step %d: valid_acc=%.2f%%" % (step_i, valid_acc * 100))
 
 
 def eval_on_model(model, dataloader, device):
     eq_num = 0
     all_num = 0
 
-    for batch in tqdm(dataloader, desc='Testing...'):
+    for batch in tqdm(dataloader, desc='Evaluating...'):
         # batch data
         batch = [x.to(device) if x is not None else x for x in batch]
         cls_truth = batch[-1]

@@ -50,6 +50,10 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
         num_epochs = config['train']['num_epochs']
         clip_grad_max = config['train']['clip_grad_norm']
+        
+        best_macro_f1 = 0
+        best_micro_f1 = 0
+        best_epoch = 0
 
         for epoch in range(num_epochs):
             # train
@@ -71,9 +75,18 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
             logger.info("epoch=%d, valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%" %
                         (epoch, metrics['macro_f1'] * 100, metrics['micro_f1'] * 100))
 
+            if metrics['macro_f1'] > best_macro_f1:
+                model.save_parameters(epoch)
+
+                best_macro_f1 = metrics['macro_f1']
+                best_micro_f1 = metrics['micro_f1']
+                best_epoch = epoch
+        logging.info('best epoch=%d: valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%'
+                     % (best_epoch, best_macro_f1 * 100, best_micro_f1 * 100))
+
     if is_test:
         logger.info('start testing...')
-        # model.load_parameters(enable_cuda, force=True, strict=False)
+        model.load_out_parameters(enable_cuda, force=True, strict=True)
 
         with torch.no_grad():
             model.eval()
@@ -117,7 +130,6 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         writer.add_scalar('Train-Step-Loss', batch_loss, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-EM', macro_f1, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-F1', micro_f1, global_step=epoch * batch_cnt + i)
-    model.save_parameters(epoch)
 
 
 def eval_on_model(model, batch_data, device):

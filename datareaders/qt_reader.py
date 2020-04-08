@@ -24,7 +24,7 @@ class QTReader:
         self.cand_doc_size = self.config['global']['cand_doc_size']
         self.batch_size = self.config['train']['batch_size']
         self.train_iters = self.config['train']['train_iters']
-        self.test_iters = self.config['train']['test_iters']
+        self.valid_iters = self.config['train']['valid_iters']
 
         self.data = {}
         self.meta_data = {}
@@ -49,14 +49,15 @@ class QTReader:
             self.data[name] = torch.tensor(value)
 
     def get_dataloader_train(self):
-        return self._get_dataloader(self.train_iters)
+        return self._get_dataloader(self.data['x_train'], self.data['y_train'], self.data['seq_train'],
+                                    self.train_iters)
 
-    def get_dataloader_test(self):
-        return self._get_dataloader(self.test_iters)
+    def get_dataloader_valid(self):
+        return self._get_dataloader(self.data['x_valid'], self.data['y_valid'], self.data['seq_valid'],
+                                    self.valid_iters)
 
-    def _get_dataloader(self, iters):
-        doc_dataset = QTDataset(self.data['x_train'], self.data['y_train'], self.data['seq_train'],
-                                self.cand_doc_size)
+    def _get_dataloader(self, x, y, seq, iters):
+        doc_dataset = QTDataset(x, y, seq, self.cand_doc_size)
         cur_sampler = torch.utils.data.sampler.RandomSampler(doc_dataset,
                                                              replacement=True,
                                                              num_samples=iters * self.batch_size)

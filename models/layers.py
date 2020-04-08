@@ -350,9 +350,9 @@ class PositionalEncoding(torch.nn.Module):
         dropout: dropout probability
         max_len: sentence max length
     Inputs:
-        x (batch, seq_len, nemb): tensor containing the features of the input sequence.
+        x (seq_len, batch, nemb): tensor containing the features of the input sequence.
     Outputs:
-        output (batch, seq_len, nemb)
+        output (seq_len, batch, nemb)
     """
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
@@ -367,5 +367,6 @@ class PositionalEncoding(torch.nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
+        return NotImplementedError
         x = x + self.pe[x.size(0), :]
         return self.dropout(x)

@@ -44,6 +44,19 @@ class BaseModule(torch.nn.Module):
                                                           strict)
             logger.info('loaded {} module from {}'.format(self.name, load_weight_path))
 
+    def load_out_parameters(self, enable_cuda, force=False, strict=False):
+        if force:
+            assert os.path.exists(self.out_checkpoint_path)
+
+        if os.path.exists(self.out_checkpoint_path):
+            logger.info('loading parameters for {} module'.format(self.name))
+            load_weight_path = load_checkpoint_parameters(self,
+                                                          self.out_weight_path,
+                                                          self.out_checkpoint_path,
+                                                          enable_cuda,
+                                                          strict)
+            logger.info('loaded {} module from {}'.format(self.name, load_weight_path))
+
     def save_parameters(self, num):
         """
         Save the trained parameters

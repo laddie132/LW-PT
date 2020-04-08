@@ -55,7 +55,7 @@ def main(config_path, in_infix, out_infix):
 def test_on_model(model, dataloader, device):
     all_doc_rep = []
 
-    for batch in tqdm(dataloader, desc='Testing...'):
+    for batch in tqdm(dataloader, desc='Building...'):
         batch = [x.to(device) if x is not None else x for x in batch]
 
         # forward
