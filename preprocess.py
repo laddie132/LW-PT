@@ -4,6 +4,11 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
+"""
+Pre-Processing the dataset
+PYTHONHASHSEED should be set to 1 before running
+"""
+
 import os
 import json
 import codecs

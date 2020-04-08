@@ -86,7 +86,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
     if is_test:
         logger.info('start testing...')
-        model.load_out_parameters(enable_cuda, force=True, strict=True)
+        if is_train:
+            model.load_out_parameters(enable_cuda, force=True, strict=True)
 
         with torch.no_grad():
             model.eval()

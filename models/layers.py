@@ -194,11 +194,13 @@ class MyRNNBase(torch.nn.Module):
         if mode == 'LSTM':
             self.hidden = torch.nn.LSTM(input_size=input_size,
                                         hidden_size=hidden_size,
+                                        dropout=dropout_p,
                                         num_layers=num_layers,
                                         bidirectional=bidirectional)
         elif mode == 'GRU':
             self.hidden = torch.nn.GRU(input_size=input_size,
                                        hidden_size=hidden_size,
+                                       dropout=dropout_p,
                                        num_layers=num_layers,
                                        bidirectional=bidirectional)
         else:
@@ -230,7 +232,7 @@ class MyRNNBase(torch.nn.Module):
         # layer normalization
         if self.enable_layer_norm:
             seq_len, batch, input_size = v.shape
-            v = v.view(-1, input_size)
+            v = v.contiguous().view(-1, input_size)
             v = self.layer_norm(v)
             v = v.view(seq_len, batch, input_size)
 

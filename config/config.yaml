@@ -19,12 +19,12 @@ model:
   hidden_size: 100
   label_size: 22
   dropout_p: 0.2
-  layer_norm: false
+  layer_norm: true
 
 train:
-  num_epochs: 20
+  num_epochs: 30
   train_iters: 5000
-  valid_iters: 100
+  valid_iters: 50
   test_iters: 1000
 
   eval_steps: 100
