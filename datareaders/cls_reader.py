@@ -4,7 +4,6 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-import h5py
 import pickle
 import torch
 import torch.utils.data
@@ -23,20 +22,13 @@ class DocClsReader:
 
         self.data = {}
         self.load_data()
-        # self.load_h5_data()
         self.docs_rep = self.load_doc_rep()
 
     def load_data(self):
         with open(self.data_path, 'rb') as f:
             data = pickle.load(f)
         for name, value in data.items():
-            self.data[name] = torch.tensor(value)
-
-    def load_h5_data(self):
-        with h5py.File(self.h5_path, 'r') as f:
-            f_data = f['data']
-            for name, value in f_data.items():
-                self.data[name] = torch.tensor(value)
+            self.data[name] = torch.tensor(value, dtype=torch.long)
 
     def load_doc_rep(self, on_cpu=True):
         """

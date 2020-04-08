@@ -74,7 +74,7 @@ class RMSC(BaseDataset):
         print('building RMSC dataset...')
         self.extract()
         self.train_emb()
-        data, meta_data = self.transform()
+        data, meta_data = self.transform_idx()
         self.save(data, meta_data)
         # self.save_h5(data, meta_data)
 
@@ -105,7 +105,7 @@ class RMSC(BaseDataset):
 
     def train_emb(self):
         print('training word2vec...')
-        self.word2vec = Word2Vec(self.all_comments_list, workers=4, min_count=1, seed=random_seed)
+        self.word2vec = Word2Vec(self.all_comments_list, workers=1, min_count=1, seed=random_seed)
         self.word2vec.save("data/rmsc_word2vec.model")
         del self.all_comments_list
         print("word2vec info:", self.word2vec)
@@ -116,10 +116,13 @@ class RMSC(BaseDataset):
     def word_emb(self, word):
         return self.word2vec[word]
 
+    def word_index(self, word):
+        return self.word2vec.wv.vocab[word].index
+
     def tag_emb(self, tag):
         return self.dict_tag[tag]
 
-    def transform(self):
+    def transform_emb(self):
         labels_origin = []
         len_songs = len(self.total_song_comments_and_tags)
         embed_input = np.zeros((len_songs,
@@ -157,9 +160,6 @@ class RMSC(BaseDataset):
         labels = MultiLabelBinarizer().fit_transform(labels_origin)
         del labels_origin
 
-        # de_rate = 0
-        # soft_labels = (1 - de_rate) * labels + de_rate * (1 - labels)
-
         # split the data
         x_train, x_test_valid, y_train, y_test_valid, seq_train, seq_test_valid, songs_train, songs_test_valid = \
             train_test_split(embed_input, labels, len_every_comment_cutted, self.songs, test_size=0.3,
@@ -191,7 +191,71 @@ class RMSC(BaseDataset):
                      'songs_valid': songs_valid,
                      'songs_test': songs_valid,
                      'sorted_tags': self.sorted_total_tags}
+        return data, meta_data
 
+    def transform_idx(self):
+        labels_origin = []
+        len_songs = len(self.total_song_comments_and_tags)
+        comment = np.ones((len_songs,
+                           self.max_sent,
+                           self.max_word), dtype=np.long) * -1
+
+        # get input and label with embeddings
+        sum_comment_count = 0
+        for i in tqdm(range(len_songs), desc='transforming...'):
+            every_song_comment_words = np.ones((self.max_sent, self.max_word), dtype=np.long) * -1
+            all_comments_in_every_song = self.total_song_comments_and_tags[i]["comments"]
+
+            for j in range(len(all_comments_in_every_song)):
+                every_comment_in_one_song = np.array(list(map(self.word_index, all_comments_in_every_song[j])),
+                                                     dtype=np.long)
+                every_comment = np.zeros((self.max_word,))
+
+                count_cur_comment = len(every_comment_in_one_song)
+                sum_comment_count += count_cur_comment
+
+                if count_cur_comment < self.max_word:
+                    every_comment[0:count_cur_comment] = every_comment_in_one_song
+                else:
+                    every_comment = every_comment_in_one_song[0:self.max_word]
+
+                every_song_comment_words[j] = every_comment
+            comment[i] = every_song_comment_words
+            every_song_comment_tags_embedding = np.array(
+                list(map(self.tag_emb, self.total_song_comments_and_tags[i]["tags"])))
+            labels_origin.append(every_song_comment_tags_embedding)
+        del self.total_song_comments_and_tags
+        ave_sent_length = sum_comment_count / (len_songs * self.max_sent)
+
+        print("average comment length", ave_sent_length)
+        self.attrs['ave_sent_length'] = ave_sent_length
+        labels = MultiLabelBinarizer().fit_transform(labels_origin)
+        del labels_origin
+
+        # split the data
+        x_train, x_test_valid, y_train, y_test_valid, songs_train, songs_test_valid = \
+            train_test_split(comment, labels, self.songs, test_size=0.3,
+                             random_state=random_seed)
+        del comment
+        x_test, x_valid, y_test, y_valid, songs_test, songs_valid = train_test_split(
+            x_test_valid, y_test_valid, songs_test_valid, test_size=0.3, random_state=random_seed)
+        print('train:', len(songs_train))
+        self.attrs['train_size'] = len(songs_train)
+        print('valid:', len(songs_valid))
+        self.attrs['valid_size'] = len(songs_valid)
+        print('test:', len(songs_test))
+        self.attrs['test_size'] = len(songs_test)
+
+        data = {'x_train': x_train,
+                'x_valid': x_valid,
+                'x_test': x_test,
+                'y_train': y_train,
+                'y_valid': y_valid,
+                'y_test': y_test}
+        meta_data = {'songs_train': songs_train,
+                     'songs_valid': songs_valid,
+                     'songs_test': songs_valid,
+                     'sorted_tags': self.sorted_total_tags}
         return data, meta_data
 
     def save(self, data, meta_data):

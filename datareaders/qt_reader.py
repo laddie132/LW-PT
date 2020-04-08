@@ -12,7 +12,8 @@ import random
 import torch
 import torch.utils.data
 import logging
-from utils.functions import hierarchical_sequence_mask
+from .vocabulary import Vocabulary
+from utils.functions import del_zeros_right, compute_mask
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class QTReader:
         with h5py.File(h5_path, 'r') as f:
             f_data = f['data']
             for name, value in f_data.items():
-                self.data[name] = torch.tensor(value)
+                self.data[name] = torch.tensor(value, dtype=torch.long)
 
             # f_meta_data = f['meta_data']
             # for name, value in f_meta_data.items():
@@ -49,15 +50,13 @@ class QTReader:
             self.data[name] = torch.tensor(value)
 
     def get_dataloader_train(self):
-        return self._get_dataloader(self.data['x_train'], self.data['y_train'], self.data['seq_train'],
-                                    self.train_iters)
+        return self._get_dataloader(self.data['x_train'], self.data['y_train'], self.train_iters)
 
     def get_dataloader_valid(self):
-        return self._get_dataloader(self.data['x_valid'], self.data['y_valid'], self.data['seq_valid'],
-                                    self.valid_iters)
+        return self._get_dataloader(self.data['x_valid'], self.data['y_valid'], self.valid_iters)
 
-    def _get_dataloader(self, x, y, seq, iters):
-        doc_dataset = QTDataset(x, y, seq, self.cand_doc_size)
+    def _get_dataloader(self, x, y, iters):
+        doc_dataset = QTDataset(x, y, self.cand_doc_size)
         cur_sampler = torch.utils.data.sampler.RandomSampler(doc_dataset,
                                                              replacement=True,
                                                              num_samples=iters * self.batch_size)
@@ -69,14 +68,13 @@ class QTReader:
 
 
 class QTDataset(torch.utils.data.Dataset):
-    def __init__(self, docs, labels, seq_len, cand_doc_size):
+    def __init__(self, docs, labels, cand_doc_size):
         super(QTDataset, self).__init__()
         self.docs = docs
         self.labels = labels
-        self.seq_len = seq_len
 
         self.cand_doc_size = cand_doc_size
-        self.nums, self.max_sent_num, self.max_sent_len, _ = self.docs.shape
+        self.nums, self.max_sent_num, self.max_sent_len = self.docs.shape
 
         self.same_docs, self.diff_docs = self.gen_same_diff_docs()
 
@@ -85,7 +83,6 @@ class QTDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         cur_doc = self.docs[index]
-        cur_len = self.seq_len[index]
 
         # random select a label as input
         cur_label = self.labels[index]
@@ -104,9 +101,8 @@ class QTDataset(torch.utils.data.Dataset):
         gt_idx = cand_docs_idx.index(tar_doc_idx)
 
         cand_docs = self.docs[cand_docs_idx]
-        cand_len = self.seq_len[cand_docs_idx]
 
-        return cur_doc, cur_len, cand_docs, cand_len, qt_label, gt_idx
+        return cur_doc, cand_docs, qt_label, gt_idx
 
     def gen_same_diff_docs(self):
         label_size = self.labels.shape[1]
@@ -121,44 +117,40 @@ class QTDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def collect_fun(batch):
-        cur_doc = []
-        cur_len = []
-        cand_docs = []
-        cand_len = []
+        tar_d = []
+        cand_ds = []
         qt_label = []
         gt_idx = []
 
         for ele in batch:
-            cur_doc.append(ele[0])
-            cur_len.append(ele[1])
-            cand_docs.append(ele[2])
-            cand_len.append(ele[3])
-            qt_label.append(ele[4])
-            gt_idx.append(ele[5])
+            tar_d.append(ele[0])
+            cand_ds.append(ele[1])
+            qt_label.append(ele[2])
+            gt_idx.append(ele[3])
 
-        cur_doc = torch.stack(cur_doc, dim=0).float()
-        cur_len = torch.stack(cur_len, dim=0).long()
-        cand_docs = torch.stack(cand_docs, dim=0).float()
-        cand_len = torch.stack(cand_len, dim=0).long()
+        tar_d = torch.stack(tar_d, dim=0)
+        cand_ds = torch.stack(cand_ds, dim=0)
         qt_label = torch.stack(qt_label, dim=0)
         gt_idx = torch.tensor(gt_idx, dtype=torch.long)
 
-        # generate cur mask
-        cur_mask = hierarchical_sequence_mask(cur_len)
-        _, cur_sent_num, cur_sent_len = cur_mask.size()
-        cur_doc = cur_doc[:, :cur_sent_num, :cur_sent_len, :]
+        # compress on word level
+        tar_d, _ = del_zeros_right(tar_d)
+        tar_mask = compute_mask(tar_d, padding_idx=Vocabulary.padding_idx)
 
-        # generate cand mask
-        batch, cand_size, max_sent_num = cand_len.size()
-        cand_len = cand_len.view(-1, max_sent_num)
-        cand_mask = hierarchical_sequence_mask(cand_len)
+        cand_ds, _ = del_zeros_right(cand_ds)
+        cand_mask = compute_mask(cand_ds, padding_idx=Vocabulary.padding_idx)
 
-        _, sent_num, sent_len = cand_mask.size()
-        cand_mask = cand_mask.view(batch, cand_size, sent_num, sent_len)
-        cand_docs = cand_docs[:, :, :sent_num, :sent_len, :]
+        # compress on sentence level
+        _, sent_right_idx = del_zeros_right(tar_mask.sum(-1))
+        tar_d = tar_d[:, :sent_right_idx, :]
+        tar_mask = tar_mask[:, :sent_right_idx, :]
 
-        # logger.info('tar_d: {}, {}'.format(cur_doc.dtype, cur_doc.shape))
-        # logger.info('cand_ds: {}, {}'.format(cand_docs.dtype, cand_docs.shape))
+        _, sent_right_idx = del_zeros_right(cand_mask.sum(-1))
+        cand_ds = cand_ds[:, :, :sent_right_idx, :]
+        cand_mask = cand_mask[:, :, :sent_right_idx, :]
+
+        # logger.info('tar_d: {}, {}'.format(tar_d.dtype, tar_d.shape))
+        # logger.info('cand_ds: {}, {}'.format(cand_ds.dtype, cand_ds.shape))
         # logger.info('label: {}, {}'.format(qt_label.dtype, qt_label.shape))
 
-        return cur_doc, cur_mask, cand_docs, cand_mask, qt_label, gt_idx
+        return tar_d, tar_mask, cand_ds, cand_mask, qt_label, gt_idx

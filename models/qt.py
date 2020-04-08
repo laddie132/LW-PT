@@ -6,9 +6,11 @@ __email__ = "liuhan132@foxmail.com"
 
 """DA-QT Module"""
 
+import numpy as np
 import logging
 from .base import BaseModule
 from .layers import *
+from datareaders.vocabulary import Vocabulary
 from utils.functions import compute_top_layer_mask
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,9 @@ class DAQT(BaseModule):
         self.out_checkpoint_path = config['checkpoint']['out_qt_checkpoint_path']
         self.out_weight_path = config['checkpoint']['out_qt_weight_path']
 
-        self.model = DocRepQTTrainModel(config['model'])
+        embedding_path = config['dataset']['embedding_path']
+        embedding_freeze = config['dataset']['embedding_freeze']
+        self.model = DocRepQTTrainModel(config['model'], embedding_path, embedding_freeze)
 
 
 class DAQTRep(BaseModule):
@@ -34,8 +38,10 @@ class DAQTRep(BaseModule):
 
         self.in_checkpoint_path = config['checkpoint']['in_qt_checkpoint_path']
         self.in_weight_path = config['checkpoint']['in_qt_weight_path']
+        embedding_path = config['dataset']['embedding_path']
+        embedding_freeze = config['dataset']['embedding_freeze']
 
-        self.model = DocRepQTTestModel(config['model'])
+        self.model = DocRepQTTestModel(config['model'], embedding_path, embedding_freeze)
 
 
 class DocRepQTTrainModel(torch.nn.Module):
@@ -50,12 +56,22 @@ class DocRepQTTrainModel(torch.nn.Module):
         cand_d_prop: (batch, cand_doc_num)
     """
 
-    def __init__(self, model_config):
+    def __init__(self, model_config, embedding_path, embedding_freeze=True):
         super(DocRepQTTrainModel, self).__init__()
+        embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
+        logger.info('Embedding shape: ' + str(embedding_weight.shape))
+        self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
+                                                                  freeze=embedding_freeze,
+                                                                  padding_idx=Vocabulary.padding_idx)
+
         self.tar_doc_encoder = DocRepQTEncoder(model_config)
         self.cand_doc_encoder = DocRepQTEncoder(model_config)
 
     def forward(self, tar_d, tar_mask, cand_ds, cand_mask, label):
+        # embedding layer
+        tar_d = self.embedding_layer(tar_d)
+        cand_ds = self.embedding_layer(cand_ds)
+
         # target document encoder layer
         tar_doc_rep, _ = self.tar_doc_encoder(tar_d, tar_mask, label)
 
@@ -92,13 +108,22 @@ class DocRepQTTestModel(torch.nn.Module):
         document_rep: (batch, label_size, hidden_size * 4)
     """
 
-    def __init__(self, model_config):
+    def __init__(self, model_config, embedding_path, embedding_freeze=True):
         super(DocRepQTTestModel, self).__init__()
         self.label_size = model_config['label_size']
+        embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
+        logger.info('Embedding shape: ' + str(embedding_weight.shape))
+        self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
+                                                                  freeze=embedding_freeze,
+                                                                  padding_idx=-1)
+
         self.tar_doc_encoder = DocRepQTEncoder(model_config)
         self.cand_doc_encoder = DocRepQTEncoder(model_config)
 
     def forward(self, doc, doc_mask):
+        # embedding layer
+        doc = self.embedding_layer(doc)
+
         batch = doc.size(0)
         doc_rep = []
 
@@ -137,7 +162,6 @@ class DocRepQTEncoder(torch.nn.Module):
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
 
-        self.dropout_layer = torch.nn.Dropout(p=dropout_p)
         self.doc_word_rnn = MyRNNBase(mode='GRU',
                                       input_size=embedding_dim,
                                       hidden_size=hidden_size,
