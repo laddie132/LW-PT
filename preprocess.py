@@ -59,6 +59,7 @@ class RMSC(BaseDataset):
 
         self.attrs = {}
         self.songs = os.listdir(self.data_path)
+        self.songs.sort()     # make sure the same order for different machines
         self.sorted_total_tags = []
         self.all_comments_list = []
         self.total_song_comments_and_tags = []
@@ -106,6 +107,7 @@ class RMSC(BaseDataset):
     def train_emb(self):
         print('training word2vec...')
         self.word2vec = Word2Vec(self.all_comments_list, workers=1, min_count=1, seed=random_seed)
+        # self.word2vec = Word2Vec.load('data/rmsc_word2vec.model')     # load pre-trained embeddings
         self.word2vec.save("data/rmsc_word2vec.model")
         del self.all_comments_list
         print("word2vec info:", self.word2vec)
@@ -117,7 +119,7 @@ class RMSC(BaseDataset):
         return self.word2vec[word]
 
     def word_index(self, word):
-        return self.word2vec.wv.vocab[word].index
+        return self.word2vec.wv.vocab[word].index + 1   # padding index on zero
 
     def tag_emb(self, tag):
         return self.dict_tag[tag]
@@ -189,21 +191,21 @@ class RMSC(BaseDataset):
                 'seq_test': seq_test}
         meta_data = {'songs_train': songs_train,
                      'songs_valid': songs_valid,
-                     'songs_test': songs_valid,
+                     'songs_test': songs_test,
                      'sorted_tags': self.sorted_total_tags}
         return data, meta_data
 
     def transform_idx(self):
         labels_origin = []
         len_songs = len(self.total_song_comments_and_tags)
-        comment = np.ones((len_songs,
-                           self.max_sent,
-                           self.max_word), dtype=np.long) * -1
+        comment = np.zeros((len_songs,
+                            self.max_sent,
+                            self.max_word), dtype=np.long)
 
         # get input and label with embeddings
         sum_comment_count = 0
         for i in tqdm(range(len_songs), desc='transforming...'):
-            every_song_comment_words = np.ones((self.max_sent, self.max_word), dtype=np.long) * -1
+            every_song_comment_words = np.zeros((self.max_sent, self.max_word), dtype=np.long)
             all_comments_in_every_song = self.total_song_comments_and_tags[i]["comments"]
 
             for j in range(len(all_comments_in_every_song)):
@@ -254,7 +256,7 @@ class RMSC(BaseDataset):
                 'y_test': y_test}
         meta_data = {'songs_train': songs_train,
                      'songs_valid': songs_valid,
-                     'songs_test': songs_valid,
+                     'songs_test': songs_test,
                      'sorted_tags': self.sorted_total_tags}
         return data, meta_data
 

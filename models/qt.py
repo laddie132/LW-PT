@@ -58,7 +58,7 @@ class DocRepQTTrainModel(torch.nn.Module):
 
     def __init__(self, model_config, embedding_path, embedding_freeze=True):
         super(DocRepQTTrainModel, self).__init__()
-        embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
+        embedding_weight = Vocabulary.load_emb(embedding_path)
         logger.info('Embedding shape: ' + str(embedding_weight.shape))
         self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
                                                                   freeze=embedding_freeze,
@@ -111,11 +111,11 @@ class DocRepQTTestModel(torch.nn.Module):
     def __init__(self, model_config, embedding_path, embedding_freeze=True):
         super(DocRepQTTestModel, self).__init__()
         self.label_size = model_config['label_size']
-        embedding_weight = torch.tensor(np.load(embedding_path), dtype=torch.float32)
+        embedding_weight = Vocabulary.load_emb(embedding_path)
         logger.info('Embedding shape: ' + str(embedding_weight.shape))
         self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
                                                                   freeze=embedding_freeze,
-                                                                  padding_idx=-1)
+                                                                  padding_idx=Vocabulary.padding_idx)
 
         self.tar_doc_encoder = DocRepQTEncoder(model_config)
         self.cand_doc_encoder = DocRepQTEncoder(model_config)

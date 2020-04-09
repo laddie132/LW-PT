@@ -67,8 +67,7 @@ class QTRepDataset(torch.utils.data.Dataset):
         return cur_doc
 
     @staticmethod
-    def collect_fun(batch):
-        doc = [ele[0] for ele in batch]
+    def collect_fun(doc):
         doc = torch.stack(doc, dim=0)
 
         # compress on word level

@@ -55,7 +55,7 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
         best_micro_f1 = 0
         best_epoch = 0
 
-        for epoch in range(num_epochs):
+        for epoch in range(1, num_epochs + 1):
             # train
             model.train()  # set training = True, make sure right dropout
             train_on_model(epoch=epoch,

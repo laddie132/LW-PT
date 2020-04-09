@@ -1,21 +1,21 @@
 # DA-QT
 
 ## Preprocessing
-``` python
+``` bash
 PYTHONHASHSEED=1 python preprocess.py
 ```
 
 ## Pre-Train
-``` python
+``` bash
 python pretrain.py --out=[OUT_INFIX]
 ```
 
 ## Build Doc-Rep
-``` python
+``` bash
 python build_doc_rep.py --in=[IN_INFIX]
 ```
 
 ## Train Classification
-``` python
+``` bash
 python classification.py --out=[OUT_INFIX]
 ```

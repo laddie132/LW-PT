@@ -30,7 +30,7 @@ def main(config_path, in_infix, out_infix):
 
     logger.info('constructing model...')
     doc_rep_module = DAQTRep(config).to(device)
-    doc_rep_module.load_parameters(enable_cuda, force=True, strict=True)
+    doc_rep_module.load_parameters(enable_cuda, force=True, strict=False)
 
     # dataset
     train_data = dataset.get_dataloader_train()
