@@ -19,7 +19,7 @@ class MultiCls(BaseModule):
         self.out_checkpoint_path = config['checkpoint']['out_cls_checkpoint_path']
         self.out_weight_path = config['checkpoint']['out_cls_weight_path']
 
-        self.model = MultiClsModel(config['model'])
+        self.model = LabelGraphModel(config['model'])
 
     @staticmethod
     def criterion(y_pred, y_true, reduction='mean'):
@@ -51,11 +51,46 @@ class MultiClsModel(torch.nn.Module):
         super(MultiClsModel, self).__init__()
         hidden_size = model_config['hidden_size']
         label_size = model_config['label_size']
-        # dropout_p = model_config['dropout_p']
 
-        # self.dropout = torch.nn.Dropout(dropout_p)
         self.cls_layer = torch.nn.Linear(hidden_size * 4 * label_size, label_size)
 
     def forward(self, doc_rep):
-        # doc_rep = self.dropout(doc_rep)
+        batch, label_size, _ = doc_rep.size()
+        doc_rep = doc_rep.view(batch, -1)
         return torch.sigmoid(self.cls_layer(doc_rep))
+
+
+class LabelGraphModel(torch.nn.Module):
+    def __init__(self, model_config):
+        super(LabelGraphModel, self).__init__()
+        hidden_size = model_config['hidden_size']
+        label_size = model_config['label_size']
+
+        self.cls_layer = torch.nn.Linear(hidden_size * 4 * label_size, label_size)
+        self.label_graph = torch.nn.Parameter(torch.eye(label_size),
+                                              requires_grad=True)
+
+    def forward(self, doc_rep):
+        batch, label_size, _ = doc_rep.size()
+        doc_rep = doc_rep.view(batch, -1)
+        raw_label = self.cls_layer(doc_rep)
+        out_label = torch.sigmoid(raw_label.mm(self.label_graph))
+
+        return out_label
+
+
+class LWClsModel(torch.nn.Module):
+    def __init__(self, model_config):
+        super(LWClsModel, self).__init__()
+        hidden_size = model_config['hidden_size']
+        self.label_size = model_config['label_size']
+
+        self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(hidden_size * 4, 1)
+                                              for _ in range(self.label_size)])
+
+    def forward(self, doc_rep):
+        doc_sig = []
+        for i in range(self.label_size):
+            doc_sig.append(torch.sigmoid(self.cls_layer[i](doc_rep[:, i, :])))
+        doc_sig = torch.cat(doc_sig, dim=-1)
+        return doc_sig

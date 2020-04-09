@@ -65,7 +65,6 @@ class DocClsDataset(torch.utils.data.Dataset):
         self.docs_rep = docs_rep
         self.label = label
         batch, labels, _ = self.docs_rep.shape
-        self.docs_rep = self.docs_rep.view(batch, -1)
 
     def __len__(self):
         return self.docs_rep.shape[0]

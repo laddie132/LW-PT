@@ -81,3 +81,29 @@ def evaluate_f1_ml(predict, truth):
     micro_f1 = f1(micro_precision, micro_recall)
 
     return macro_f1, micro_f1
+
+
+def evaluate_hamming_loss(predict, truth):
+    """
+    Hamming Loss for multi-label evaluation
+    :param predict:
+    :param truth:
+    :return:
+    """
+    predict_max = predict.gt(0.5).long()
+
+    batch_eq_num = torch.ne(predict_max, truth).long().sum().item()
+    batch_num, label_num = predict_max.shape
+
+    return batch_eq_num * 1.0 / (batch_num * label_num)
+
+
+def evaluate_one_error(predict, truth):
+    _, max_label = predict.max(dim=-1)
+    max_label = max_label.unsqueeze(-1)
+    predict_max = torch.zeros_like(truth).scatter_(dim=-1, index=max_label, value=1)
+
+    batch_eq_num = (predict_max * truth).sum().item()
+    batch = truth.shape[0]
+
+    return (batch - batch_eq_num) * 1.0 / batch

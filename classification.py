@@ -15,7 +15,7 @@ import logging
 from models import MultiCls
 from datareaders import DocClsReader
 from utils.functions import get_optimizer
-from utils.metrics import evaluate_f1_ml
+from utils.metrics import *
 from utils.config import init_logging, init_env
 
 logger = logging.getLogger(__name__)
@@ -50,9 +50,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
         num_epochs = config['train']['num_epochs']
         clip_grad_max = config['train']['clip_grad_norm']
-        
-        best_macro_f1 = 0
-        best_micro_f1 = 0
+
+        best_metrics = None
         best_epoch = 0
 
         for epoch in range(1, num_epochs + 1):
@@ -72,17 +71,20 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                 metrics = eval_on_model(model=model,
                                         batch_data=valid_data,
                                         device=device)
-            logger.info("epoch=%d, valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%" %
-                        (epoch, metrics['macro_f1'] * 100, metrics['micro_f1'] * 100))
+            logger.info("epoch=%d, valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%, "
+                        "valid_hamming_loss=%.3f, valid_one_error=%.2f%%" %
+                        (epoch, metrics['macro_f1'] * 100, metrics['micro_f1'] * 100,
+                         metrics['hamming_loss'], metrics['one_error'] * 100))
 
-            if metrics['macro_f1'] > best_macro_f1:
+            if best_metrics is None or metrics['macro_f1'] > best_metrics['macro_f1']:
                 model.save_parameters(epoch)
 
-                best_macro_f1 = metrics['macro_f1']
-                best_micro_f1 = metrics['micro_f1']
+                best_metrics = metrics
                 best_epoch = epoch
-        logging.info('best epoch=%d: valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%'
-                     % (best_epoch, best_macro_f1 * 100, best_micro_f1 * 100))
+        logging.info('best epoch=%d: valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%, '
+                     'valid_hamming_loss=%.3f, valid_one_error=%.2f%%'
+                     % (best_epoch, best_metrics['macro_f1'] * 100, best_metrics['micro_f1'] * 100,
+                        best_metrics['hamming_loss'], best_metrics['one_error'] * 100))
 
     if is_test:
         logger.info('start testing...')
@@ -94,8 +96,9 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
             metrics = eval_on_model(model=model,
                                     batch_data=test_data,
                                     device=device)
-        logger.info("test_macro_f1=%.2f%%, test_micro_f1=%.2f%%" %
-                    (metrics['macro_f1'] * 100, metrics['micro_f1'] * 100))
+        logger.info("test_macro_f1=%.2f%%, test_micro_f1=%.2f%%, test_hamming_loss=%.3f, test_one_error=%.2f%%" %
+                    (metrics['macro_f1'] * 100, metrics['micro_f1'] * 100,
+                     metrics['hamming_loss'], metrics['one_error'] * 100))
 
     writer.close()
     logger.info('finished.')
@@ -121,6 +124,8 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
 
         # evaluate
         macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
+        hamming_loss = evaluate_hamming_loss(predict, truth)
+        one_error = evaluate_one_error(predict, truth)
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
         optimizer.step()  # update parameters
@@ -129,8 +134,10 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         batch_loss = loss.item()
         sum_loss += batch_loss * truth.shape[0]
         writer.add_scalar('Train-Step-Loss', batch_loss, global_step=epoch * batch_cnt + i)
-        writer.add_scalar('Train-Step-EM', macro_f1, global_step=epoch * batch_cnt + i)
-        writer.add_scalar('Train-Step-F1', micro_f1, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-Macro_F1', macro_f1, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-Micro_F1', micro_f1, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-Hamming_Loss', hamming_loss, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-One_Error', one_error, global_step=epoch * batch_cnt + i)
 
 
 def eval_on_model(model, batch_data, device):
@@ -153,9 +160,13 @@ def eval_on_model(model, batch_data, device):
     predict = torch.cat(all_predict, dim=0)
     truth = torch.cat(all_truth, dim=0)
     macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
+    hamming_loss = evaluate_hamming_loss(predict, truth)
+    one_error = evaluate_one_error(predict, truth)
 
     metrics = {'macro_f1': macro_f1,
-               'micro_f1': micro_f1}
+               'micro_f1': micro_f1,
+               'hamming_loss': hamming_loss,
+               'one_error': one_error}
     return metrics
 
 
