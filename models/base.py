@@ -37,7 +37,7 @@ class BaseModule(torch.nn.Module):
                                                           self.in_checkpoint_path,
                                                           enable_cuda,
                                                           strict)
-            logger.info('loaded {} module from {}'.format(self.name, load_weight_path))
+            logger.info('loaded {} module from {}'.format(self.__class__.__name__, load_weight_path))
 
     def load_out_parameters(self, enable_cuda, force=False, strict=False):
         if force:
@@ -50,7 +50,7 @@ class BaseModule(torch.nn.Module):
                                                           self.out_checkpoint_path,
                                                           enable_cuda,
                                                           strict)
-            logger.info('loaded {} module from {}'.format(self.name, load_weight_path))
+            logger.info('loaded {} module from {}'.format(self.__class__.__name__, load_weight_path))
 
     def save_parameters(self, num):
         """

@@ -4,7 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-"""Dataset Reader"""
+"""Dataset Reader for Quick-Thought on training"""
 
 import h5py
 import pickle
@@ -26,6 +26,7 @@ class QTReader:
         self.batch_size = self.config['train']['batch_size']
         self.train_iters = self.config['train']['train_iters']
         self.valid_iters = self.config['train']['valid_iters']
+        self.hierarchical = config['global']['hierarchical']
 
         self.data = {}
         self.meta_data = {}
@@ -56,7 +57,7 @@ class QTReader:
         return self._get_dataloader(self.data['x_valid'], self.data['y_valid'], self.valid_iters)
 
     def _get_dataloader(self, x, y, iters):
-        doc_dataset = QTDataset(x, y, self.cand_doc_size)
+        doc_dataset = QTDataset(x, y, self.cand_doc_size, self.hierarchical)
         cur_sampler = torch.utils.data.sampler.RandomSampler(doc_dataset,
                                                              replacement=True,
                                                              num_samples=iters * self.batch_size)
@@ -64,22 +65,21 @@ class QTReader:
                                            batch_size=self.batch_size,
                                            sampler=cur_sampler,
                                            num_workers=self.num_workers,
-                                           collate_fn=QTDataset.collect_fun)
+                                           collate_fn=doc_dataset.collect_fun)
 
 
 class QTDataset(torch.utils.data.Dataset):
-    def __init__(self, docs, labels, cand_doc_size):
+    def __init__(self, docs, labels, cand_doc_size, hierarchical):
         super(QTDataset, self).__init__()
         self.docs = docs
         self.labels = labels
-
         self.cand_doc_size = cand_doc_size
-        self.nums, self.max_sent_num, self.max_sent_len = self.docs.shape
+        self.hierarchical = hierarchical
 
         self.same_docs, self.diff_docs = self.gen_same_diff_docs()
 
     def __len__(self):
-        return self.nums
+        return self.docs.shape[0]
 
     def __getitem__(self, index):
         cur_doc = self.docs[index]
@@ -115,8 +115,7 @@ class QTDataset(torch.utils.data.Dataset):
             diff_docs.append(non_idx)
         return same_docs, diff_docs
 
-    @staticmethod
-    def collect_fun(batch):
+    def collect_fun(self, batch):
         tar_d = []
         cand_ds = []
         qt_label = []
@@ -141,13 +140,14 @@ class QTDataset(torch.utils.data.Dataset):
         cand_mask = compute_mask(cand_ds, padding_idx=Vocabulary.PAD_IDX)
 
         # compress on sentence level
-        _, sent_right_idx = del_zeros_right(tar_mask.sum(-1))
-        tar_d = tar_d[:, :sent_right_idx, :]
-        tar_mask = tar_mask[:, :sent_right_idx, :]
+        if self.hierarchical:
+            _, sent_right_idx = del_zeros_right(tar_mask.sum(-1))
+            tar_d = tar_d[:, :sent_right_idx, :]
+            tar_mask = tar_mask[:, :sent_right_idx, :]
 
-        _, sent_right_idx = del_zeros_right(cand_mask.sum(-1))
-        cand_ds = cand_ds[:, :, :sent_right_idx, :]
-        cand_mask = cand_mask[:, :, :sent_right_idx, :]
+            _, sent_right_idx = del_zeros_right(cand_mask.sum(-1))
+            cand_ds = cand_ds[:, :, :sent_right_idx, :]
+            cand_mask = cand_mask[:, :, :sent_right_idx, :]
 
         # logger.info('tar_d: {}, {}'.format(tar_d.dtype, tar_d.shape))
         # logger.info('cand_ds: {}, {}'.format(cand_ds.dtype, cand_ds.shape))

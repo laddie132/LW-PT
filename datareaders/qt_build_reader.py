@@ -4,7 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-"""Dataset Reader for document representation"""
+"""Dataset Reader for Quick-Thought on documents representation building"""
 
 import pickle
 import torch
@@ -16,11 +16,12 @@ from utils.functions import del_zeros_right, compute_mask
 logger = logging.getLogger(__name__)
 
 
-class QTRepReader:
+class QTBuildReader:
     def __init__(self, config):
         self.config = config
         self.num_workers = self.config['global']['num_data_workers']
         self.batch_size = self.config['train']['batch_size']
+        self.hierarchical = config['global']['hierarchical']
 
         self.data = {}
         self.meta_data = {}
@@ -43,31 +44,29 @@ class QTRepReader:
         return self._get_dataloader(self.data['x_test'])
 
     def _get_dataloader(self, x):
-        doc_dataset = QTRepDataset(x)
+        doc_dataset = QTBuildDataset(x, self.hierarchical)
         return torch.utils.data.DataLoader(doc_dataset,
                                            batch_size=self.batch_size,
                                            num_workers=self.num_workers,
                                            shuffle=False,
-                                           collate_fn=QTRepDataset.collect_fun)
+                                           collate_fn=doc_dataset.collect_fun)
 
 
-class QTRepDataset(torch.utils.data.Dataset):
-    def __init__(self, docs):
-        super(QTRepDataset, self).__init__()
+class QTBuildDataset(torch.utils.data.Dataset):
+    def __init__(self, docs, hierarchical):
+        super(QTBuildDataset, self).__init__()
         self.docs = docs
-
-        self.nums, self.max_sent_num, self.max_sent_len = self.docs.shape
+        self.hierarchical = hierarchical
 
     def __len__(self):
-        return self.nums
+        return self.docs.shape[0]
 
     def __getitem__(self, index):
         cur_doc = self.docs[index]
 
         return cur_doc
 
-    @staticmethod
-    def collect_fun(doc):
+    def collect_fun(self, doc):
         doc = torch.stack(doc, dim=0)
 
         # compress on word level
@@ -75,8 +74,9 @@ class QTRepDataset(torch.utils.data.Dataset):
         doc_mask = compute_mask(doc, padding_idx=Vocabulary.PAD_IDX)
 
         # compress on sentence level
-        _, sent_right_idx = del_zeros_right(doc_mask.sum(-1))
-        doc = doc[:, :sent_right_idx, :]
-        doc_mask = doc_mask[:, :sent_right_idx, :]
+        if self.hierarchical:
+            _, sent_right_idx = del_zeros_right(doc_mask.sum(-1))
+            doc = doc[:, :sent_right_idx, :]
+            doc_mask = doc_mask[:, :sent_right_idx, :]
 
         return doc, doc_mask

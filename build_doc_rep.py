@@ -13,7 +13,7 @@ import torch.nn
 import torch.multiprocessing
 import logging
 from models import DAQTRep
-from datareaders import QTRepReader
+from datareaders import QTBuildReader
 from utils.config import init_logging, init_env
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def main(config_path, in_infix, out_infix):
                                                    writer_suffix='qt_log_path')
 
     logger.info('reading dataset...')
-    dataset = QTRepReader(config)
+    dataset = QTBuildReader(config)
 
     logger.info('constructing model...')
     doc_rep_module = DAQTRep(config).to(device)

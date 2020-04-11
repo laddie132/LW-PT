@@ -5,13 +5,14 @@ __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
 import os
-import json
-import codecs
+import logging
 import nltk
 import numpy as np
 from tqdm import tqdm
 from sklearn.preprocessing import MultiLabelBinarizer
 from .base import BaseDataset
+
+logger = logging.getLogger(__name__)
 
 
 class AAPD(BaseDataset):
@@ -35,7 +36,7 @@ class AAPD(BaseDataset):
         self.raw_texts_labels = {}
 
     def extract(self):
-        print('extracting dataset...')
+        logger.info('extracting dataset...')
         train_text_labels, train_texts, train_labels, train_word_sum, train_label_sum = \
             self.load_data(os.path.join(self.data_path, 'text_train'),
                            os.path.join(self.data_path, 'label_train'))
@@ -54,19 +55,22 @@ class AAPD(BaseDataset):
         total_labels = train_labels.union(val_labels).union(test_labels)
 
         data_size = len(total_texts)
-        print('Texts:', data_size)
         self.attrs['data_size'] = data_size
         self.attrs['train_size'] = len(train_text_labels)
         self.attrs['valid_size'] = len(val_text_labels)
         self.attrs['test_size'] = len(test_text_labels)
+        logger.info('Size: {}'.format(data_size))
+        logger.info('Train size: {}'.format(len(train_text_labels)))
+        logger.info('Valid size: {}'.format(len(val_text_labels)))
+        logger.info('Test size: {}'.format(len(test_text_labels)))
 
-        print('Labels:', len(total_labels))
+        logger.info('Labels: {}'.format(len(total_labels)))
         self.attrs['label_size'] = len(total_labels)
 
         ave_text_len = (train_word_sum + val_word_sum + test_word_sum) * 1.0 / data_size
         ave_label_size = (train_label_sum + val_label_sum + test_label_sum) * 1.0 / data_size
-        print('Ave text len:', ave_text_len)
-        print('Ave label size:', ave_label_size)
+        logger.info('Ave text len: {}'.format(ave_text_len))
+        logger.info('Ave label size: {}'.format(ave_label_size))
         self.attrs['ave_text_len'] = ave_text_len
         self.attrs['ave_label_size'] = ave_label_size
 

@@ -4,6 +4,8 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
+"""Dataset Reader for directly classification with e2e model"""
+
 import pickle
 import torch
 import torch.utils.data

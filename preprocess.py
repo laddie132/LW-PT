@@ -12,6 +12,7 @@ PYTHONHASHSEED should be set to 1 before running
 import argparse
 import preprocessors
 from utils.functions import set_seed
+from utils.config import init_logging
 
 random_seed = 1
 
@@ -28,4 +29,5 @@ if __name__ == '__main__':
     parser.add_argument('--path', type=str, default='', help='dataset path')
     args = parser.parse_args()
 
+    init_logging()
     run(args.data, args.path)

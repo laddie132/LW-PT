@@ -82,7 +82,7 @@ class LWBiGRU(torch.nn.Module):
         visual_parm = {}
 
         # (batch, doc_len, hidden_size * 2)
-        doc_rep, _ = self.doc_word_rnn(doc_emb, doc_mask)
+        doc_rep, _ = self.doc_rnn(doc_emb, doc_mask)
 
         # (batch, hidden_size * 2)
         doc_rep, doc_word_att_p = self.doc_attention(doc_rep, label, doc_mask)

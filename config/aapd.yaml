@@ -1,12 +1,12 @@
 # config file
 
 dataset:
-  h5_path: data/rmsc.h5
-  data_path: data/rmsc.pickle
-  meta_data_path: data/rmsc.pickle.meta
-  doc_rep_path: data/rmsc_doc_qt_rep.pt-ln-5k
+  h5_path: data/aapd.h5
+  data_path: data/aapd.pickle
+  meta_data_path: data/aapd.pickle.meta
+  doc_rep_path: data/aapd_doc_qt_rep.pt-ln-5k
 
-  embedding_path: data/rmsc_word2vec.model.wv.vectors.npy
+  embedding_path: data/aapd_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
 global:
@@ -18,18 +18,18 @@ global:
   max_doc_length: 500
   cand_doc_size: 4
 
-  hierarchical: True  # same as the model
+  hierarchical: False  # same as the model
 
 model:
-  encoder: HLWAN    # BiGRU, LWBiGRU, HAN, HLWAN
-  decoder: LinearMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
+  encoder: LWBiGRU    # BiGRU, LWBiGRU, HAN, HLWAN
+  decoder: LabelWiseMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
 
   use_pretrain: True
   embedding_num: 50000
   embedding_dim: 100
 
   hidden_size: 100
-  label_size: 22
+  label_size: 54    # different with dataset
   dropout_p: 0.2
   layer_norm: true
 

@@ -8,11 +8,14 @@ import os
 import json
 import codecs
 import jieba
+import logging
 import numpy as np
 from tqdm import tqdm
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 from .base import BaseDataset
+
+logger = logging.getLogger(__name__)
 
 
 class RMSC(BaseDataset):
@@ -57,10 +60,10 @@ class RMSC(BaseDataset):
                 self.total_song_comments_and_tags.append(every_song_comments_and_tags)  # all tags and comments
         total_tags = set(total_tags)
 
-        print('Songs:', len(self.songs))
+        logger.info('Songs: {}'.format(len(self.songs)))
         self.attrs['data_size'] = len(self.songs)
 
-        print('Tags:', len(total_tags))
+        logger.info('Tags: {}'.format(len(total_tags)))
         self.attrs['label_size'] = len(total_tags)
 
         return total_docs, total_tags
@@ -90,7 +93,7 @@ class RMSC(BaseDataset):
                 else:
                     every_comment_embedding = every_comment_in_one_song[0:self.max_word]
                     len_every_comment_cutted[i, j] = self.max_word
-                    # print(count_cur_comment)
+                    # logger.info(count_cur_comment)
                 every_song_comment_words_embedding[j] = every_comment_embedding
             embed_input[i] = every_song_comment_words_embedding
             every_song_comment_tags_embedding = np.array(
@@ -98,7 +101,7 @@ class RMSC(BaseDataset):
             labels_origin.append(every_song_comment_tags_embedding)
         del self.total_song_comments_and_tags
         ave_sent_length = sum_comment_count / (len_songs * self.max_sent)
-        print("average comment length", ave_sent_length)
+        logger.info("average comment length: {}".format(ave_sent_length))
         self.attrs['ave_sent_length'] = ave_sent_length
         labels = MultiLabelBinarizer().fit_transform(labels_origin)
         del labels_origin
@@ -114,11 +117,11 @@ class RMSC(BaseDataset):
             x_test_valid, y_test_valid, seq_test_valid, songs_test_valid, test_size=0.3, random_state=self.random_seed)
         # label_train, label_test_valid = train_test_split(labels, test_size=0.3, random_state=self.random_seed)
         # label_test, label_valid = train_test_split(label_test_valid, test_size=0.3, random_state=self.random_seed)
-        print('train:', len(songs_train))
+        logger.info('train: {}'.format(len(songs_train)))
         self.attrs['train_size'] = len(songs_train)
-        print('valid:', len(songs_valid))
+        logger.info('valid: {}'.format(len(songs_valid)))
         self.attrs['valid_size'] = len(songs_valid)
-        print('test:', len(songs_test))
+        logger.info('test: {}'.format(len(songs_test)))
         self.attrs['test_size'] = len(songs_test)
 
         data = {'x_train': x_train,
@@ -170,7 +173,7 @@ class RMSC(BaseDataset):
         del self.total_song_comments_and_tags
         ave_sent_length = sum_comment_count / (len_songs * self.max_sent)
 
-        print("average comment length", ave_sent_length)
+        logger.info("average comment length: {}".format(ave_sent_length))
         self.attrs['ave_sent_length'] = ave_sent_length
         labels = MultiLabelBinarizer().fit_transform(labels_origin)
         del labels_origin
@@ -182,11 +185,11 @@ class RMSC(BaseDataset):
         del comment
         x_test, x_valid, y_test, y_valid, songs_test, songs_valid = train_test_split(
             x_test_valid, y_test_valid, songs_test_valid, test_size=0.3, random_state=self.random_seed)
-        print('train:', len(songs_train))
+        logger.info('train: {}'.format(len(songs_train)))
         self.attrs['train_size'] = len(songs_train)
-        print('valid:', len(songs_valid))
+        logger.info('valid: {}'.format(len(songs_valid)))
         self.attrs['valid_size'] = len(songs_valid)
-        print('test:', len(songs_test))
+        logger.info('test: {}'.format(len(songs_test)))
         self.attrs['test_size'] = len(songs_test)
 
         data = {'x_train': x_train,

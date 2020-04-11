@@ -6,8 +6,11 @@ __email__ = "liuhan132@foxmail.com"
 
 import h5py
 import pickle
+import logging
 import numpy as np
 from gensim.models.word2vec import Word2Vec
+
+logger = logging.getLogger(__name__)
 
 
 class BaseDataset:
@@ -36,7 +39,7 @@ class BaseDataset:
         ETL pipeline
         :return:
         """
-        print('building {} dataset...'.format(self.__class__.__name__))
+        logger.info('building {} dataset...'.format(self.__class__.__name__))
         total_docs, total_labels = self.extract()
         self.train_emb(total_docs, total_labels)
 
@@ -52,18 +55,19 @@ class BaseDataset:
         return NotImplementedError
 
     def train_emb(self, total_docs, total_labels):
-        print('training word2vec...')
+        logger.info('training word2vec...')
         self.word2vec = Word2Vec(total_docs, size=self.emb_dim, max_vocab_size=self.max_vocab_size,
                                  workers=1, min_count=1, seed=self.random_seed)
         # self.word2vec = Word2Vec.load('data/rmsc_word2vec.model')     # load pre-trained embeddings
-        self.word2vec.save(self.save_w2v_path)
+        self.word2vec.save(self.save_w2v_path, sep_limit=0, separately=['vectors'],
+                           ignore=['vectors_lockf', 'syn1neg', 'cum_table'])
         self.word2vec.wv.save_word2vec_format(self.save_w2v_path + '.txt')
-        print("word2vec info:", self.word2vec)
+        logger.info("word2vec info: {}".format(self.word2vec))
 
         # labels dictionary
         self.sorted_labels = sorted(list(total_labels))
-        for i, t in enumerate(self.sorted_labels):  # TODO: check the dict_tags
-            self.dict_label[t] = i + 1
+        for i, t in enumerate(self.sorted_labels):
+            self.dict_label[t] = i
 
     def word_emb(self, word):
         return self.word2vec[word]
@@ -79,16 +83,16 @@ class BaseDataset:
         Save to file
         :return:
         """
-        print('saving data...')
+        logger.info('saving data...')
         with open(self.save_data_path, 'wb') as f:
             pickle.dump(data, f)
 
-        print('saving meta-data...')
+        logger.info('saving meta-data...')
         with open(self.save_meta_data_path, 'wb') as f:
             pickle.dump({**meta_data, **self.attrs}, f)
 
     def save_h5(self, data, meta_data):
-        print('saving hdf5 data...')
+        logger.info('saving hdf5 data...')
         f = h5py.File(self.h5_path, 'w')
         str_dt = h5py.special_dtype(vlen=str)
 
