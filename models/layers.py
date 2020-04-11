@@ -102,10 +102,10 @@ class SelfAttention(torch.nn.Module):
         x_prop: (batch, len)
     """
 
-    def __init__(self, hidden_size):
+    def __init__(self, in_features):
         super(SelfAttention, self).__init__()
 
-        self.alpha_linear = torch.nn.Linear(hidden_size, 1)
+        self.alpha_linear = torch.nn.Linear(in_features, 1)
 
     def forward(self, x, x_mask=None):
         x_alpha = self.alpha_linear(x) \
@@ -125,6 +125,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
         in_features: hidden size
     Inputs:
         x: (batch, len, hidden_size)
+        label: (batch, label_size)
         x_mask: (batch, len)
     Outputs:
         x_att_rep: (batch, hidden_size)
@@ -313,7 +314,7 @@ class TransformerModel(torch.nn.Module):
         encoder_layers = torch.nn.TransformerEncoderLayer(nemb, nhead, nhid, dropout)
         self.transformer_encoder = torch.nn.TransformerEncoder(encoder_layers, nlayers)
 
-        self.doc_attention = SelfAttention(hidden_size=nemb)
+        self.doc_attention = SelfAttention(in_features=nemb)
 
     def _generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1).float()    # must be float

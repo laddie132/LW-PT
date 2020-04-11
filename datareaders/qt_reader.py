@@ -135,10 +135,10 @@ class QTDataset(torch.utils.data.Dataset):
 
         # compress on word level
         tar_d, _ = del_zeros_right(tar_d)
-        tar_mask = compute_mask(tar_d, padding_idx=Vocabulary.padding_idx)
+        tar_mask = compute_mask(tar_d, padding_idx=Vocabulary.PAD_IDX)
 
         cand_ds, _ = del_zeros_right(cand_ds)
-        cand_mask = compute_mask(cand_ds, padding_idx=Vocabulary.padding_idx)
+        cand_mask = compute_mask(cand_ds, padding_idx=Vocabulary.PAD_IDX)
 
         # compress on sentence level
         _, sent_right_idx = del_zeros_right(tar_mask.sum(-1))

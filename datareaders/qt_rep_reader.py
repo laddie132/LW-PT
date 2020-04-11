@@ -72,7 +72,7 @@ class QTRepDataset(torch.utils.data.Dataset):
 
         # compress on word level
         doc, _ = del_zeros_right(doc)
-        doc_mask = compute_mask(doc, padding_idx=Vocabulary.padding_idx)
+        doc_mask = compute_mask(doc, padding_idx=Vocabulary.PAD_IDX)
 
         # compress on sentence level
         _, sent_right_idx = del_zeros_right(doc_mask.sum(-1))

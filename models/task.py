@@ -6,20 +6,24 @@ __email__ = "liuhan132@foxmail.com"
 
 import torch
 import torch.nn
+import logging
 from .base import BaseModule
+from . import encoder
+from . import decoder
+from datareaders.vocabulary import Vocabulary
+
+logger = logging.getLogger(__name__)
 
 
-class MultiCls(BaseModule):
+class MultiLabelCls(BaseModule):
     def __init__(self, config):
-        super(MultiCls, self).__init__()
-        self.name = 'cls'
-
+        super(MultiLabelCls, self).__init__()
         self.in_checkpoint_path = config['checkpoint']['in_cls_checkpoint_path']
         self.in_weight_path = config['checkpoint']['in_cls_weight_path']
         self.out_checkpoint_path = config['checkpoint']['out_cls_checkpoint_path']
         self.out_weight_path = config['checkpoint']['out_cls_weight_path']
 
-        self.model = LabelGraphModel(config['model'])
+        self.model = getattr(decoder, config['model']['decoder'])(config['model'])
 
     @staticmethod
     def criterion(y_pred, y_true, reduction='mean'):
@@ -46,51 +50,40 @@ class MultiCls(BaseModule):
             raise ValueError(reduction)
 
 
-class MultiClsModel(torch.nn.Module):
-    def __init__(self, model_config):
-        super(MultiClsModel, self).__init__()
-        hidden_size = model_config['hidden_size']
-        label_size = model_config['label_size']
+class E2EMultiLabelCls(BaseModule):
+    def __init__(self, config):
+        super(E2EMultiLabelCls, self).__init__()
+        self.in_checkpoint_path = config['checkpoint']['in_cls_checkpoint_path']
+        self.in_weight_path = config['checkpoint']['in_cls_weight_path']
+        self.out_checkpoint_path = config['checkpoint']['out_cls_checkpoint_path']
+        self.out_weight_path = config['checkpoint']['out_cls_weight_path']
 
-        self.cls_layer = torch.nn.Linear(hidden_size * 4 * label_size, label_size)
+        embedding_path = config['dataset']['embedding_path']
+        embedding_freeze = config['dataset']['embedding_freeze']
 
-    def forward(self, doc_rep):
-        batch, label_size, _ = doc_rep.size()
-        doc_rep = doc_rep.view(batch, -1)
-        return torch.sigmoid(self.cls_layer(doc_rep))
-
-
-class LabelGraphModel(torch.nn.Module):
-    def __init__(self, model_config):
-        super(LabelGraphModel, self).__init__()
-        hidden_size = model_config['hidden_size']
-        label_size = model_config['label_size']
-
-        self.cls_layer = torch.nn.Linear(hidden_size * 4 * label_size, label_size)
-        self.label_graph = torch.nn.Parameter(torch.eye(label_size),
-                                              requires_grad=True)
-
-    def forward(self, doc_rep):
-        batch, label_size, _ = doc_rep.size()
-        doc_rep = doc_rep.view(batch, -1)
-        raw_label = self.cls_layer(doc_rep)
-        out_label = torch.sigmoid(raw_label.mm(self.label_graph))
-
-        return out_label
+        self.model = E2EMLCModel(config['model'], embedding_path, embedding_freeze)
 
 
-class LWClsModel(torch.nn.Module):
-    def __init__(self, model_config):
-        super(LWClsModel, self).__init__()
-        hidden_size = model_config['hidden_size']
-        self.label_size = model_config['label_size']
+class E2EMLCModel(torch.nn.Module):
+    def __init__(self, model_config, embedding_path, embedding_freeze):
+        super(E2EMLCModel, self).__init__()
+        embedding_num = model_config['embedding_num']
+        embedding_dim = model_config['embedding_dim']
 
-        self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(hidden_size * 4, 1)
-                                              for _ in range(self.label_size)])
+        if not model_config['use_pretrain']:
+            self.embedding_layer = torch.nn.Embedding(num_embeddings=embedding_num,
+                                                      embedding_dim=embedding_dim,
+                                                      padding_idx=Vocabulary.PAD_IDX)
+        else:
+            embedding_weight = Vocabulary.load_emb(embedding_path)
+            logger.info('Embedding shape: ' + str(embedding_weight.shape))
+            self.embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
+                                                                      freeze=embedding_freeze,
+                                                                      padding_idx=Vocabulary.PAD_IDX)
 
-    def forward(self, doc_rep):
-        doc_sig = []
-        for i in range(self.label_size):
-            doc_sig.append(torch.sigmoid(self.cls_layer[i](doc_rep[:, i, :])))
-        doc_sig = torch.cat(doc_sig, dim=-1)
-        return doc_sig
+        self.encoder = getattr(encoder, model_config['encoder'])(model_config)
+        self.decoder = getattr(decoder, model_config['decoder'])(model_config)
+
+    def forward(self, doc, *args):
+        doc_emb = self.embedding_layer(doc)
+        return self.decoder(self.encoder(doc_emb, *args)[0])

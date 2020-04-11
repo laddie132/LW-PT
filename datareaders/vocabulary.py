@@ -9,7 +9,7 @@ import numpy as np
 
 
 class Vocabulary:
-    padding_idx = 0
+    PAD_IDX = 0
 
     @staticmethod
     def load_emb(embedding_path):

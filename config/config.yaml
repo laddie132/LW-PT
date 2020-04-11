@@ -15,10 +15,17 @@ global:
 
   max_sent_length: 20
   max_sent_num: 40
+  max_doc_length: 500
   cand_doc_size: 4
 
 model:
+  encoder: HLWAN    # BiGRU, HLWAN, HAN, MASS, LWAN, LWHAN
+  decoder: LinearMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
+
+  use_pretrain: True
+  embedding_num: 50000
   embedding_dim: 100
+
   hidden_size: 100
   label_size: 22
   dropout_p: 0.2

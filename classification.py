@@ -12,7 +12,7 @@ import torch
 import torch.nn
 import torch.multiprocessing
 import logging
-from models import MultiCls
+from models import MultiLabelCls
 from datareaders import DocClsReader
 from utils.functions import get_optimizer
 from utils.metrics import *
@@ -31,11 +31,11 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
     dataset = DocClsReader(config)
 
     logger.info('constructing model...')
-    model = MultiCls(config).to(device)
+    model = MultiLabelCls(config).to(device)
     model.load_parameters(enable_cuda)
 
     # loss function
-    criterion = MultiCls.criterion
+    criterion = MultiLabelCls.criterion
     optimizer = get_optimizer(config['train']['optimizer'],
                               config['train']['learning_rate'],
                               model.parameters())
