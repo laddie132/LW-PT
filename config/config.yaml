@@ -18,8 +18,10 @@ global:
   max_doc_length: 500
   cand_doc_size: 4
 
+  hierarchical: True  # same as the model
+
 model:
-  encoder: HLWAN    # BiGRU, HLWAN, HAN, MASS, LWAN, LWHAN
+  encoder: HLWAN    # BiGRU, LWBiGRU, HAN, HLWAN
   decoder: LinearMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
 
   use_pretrain: True

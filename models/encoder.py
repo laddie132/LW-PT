@@ -22,6 +22,47 @@ class BiGRU(torch.nn.Module):
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']
+        dropout_p = model_config['dropout_p']
+        enable_layer_norm = model_config['layer_norm']
+
+        self.doc_rnn = MyRNNBase(mode='GRU',
+                                 input_size=embedding_dim,
+                                 hidden_size=hidden_size,
+                                 bidirectional=True,
+                                 dropout_p=dropout_p,
+                                 enable_layer_norm=enable_layer_norm,
+                                 batch_first=True,
+                                 num_layers=1)
+        self.doc_attention = SelfAttention(in_features=hidden_size * 2)
+
+    def forward(self, doc_emb, doc_mask):
+        visual_parm = {}
+
+        # (batch, doc_len, hidden_size * 2)
+        doc_rep, _ = self.doc_word_rnn(doc_emb, doc_mask)
+
+        # (batch, hidden_size * 2)
+        doc_rep, doc_word_att_p = self.doc_attention(doc_rep, doc_mask)
+        visual_parm['doc_word_att_p'] = doc_word_att_p
+
+        return doc_rep, visual_parm
+
+
+class LWBiGRU(torch.nn.Module):
+    """
+    Label-Wise Bidirectional GRU encoder on word-level for document representation
+    Inputs:
+        doc_emb: (batch, doc_len, emb_dim)
+        doc_mask: (batch, doc_len)
+        label: (batch, label_size)
+    Outputs:
+        doc_rep: (batch, hidden_size * 2)
+    """
+    def __init__(self, model_config):
+        super(LWBiGRU, self).__init__()
+
+        embedding_dim = model_config['embedding_dim']
+        hidden_size = model_config['hidden_size']
         label_size = model_config['label_size']
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
@@ -187,15 +228,3 @@ class HAN(torch.nn.Module):
         visual_parm['doc_sent_att_p'] = doc_sent_att_p
 
         return doc_rep, visual_parm
-
-
-class MASS(torch.nn.Module):
-    pass
-
-
-class LWAN(torch.nn.Module):
-    pass
-
-
-class LWHAN(torch.nn.Module):
-    pass

@@ -13,7 +13,7 @@ import torch.nn
 import torch.multiprocessing
 import logging
 from models import MultiLabelCls
-from datareaders import DocClsReader
+from datareaders import DocRepClsReader
 from utils.functions import get_optimizer
 from utils.metrics import *
 from utils.config import init_logging, init_env
@@ -28,7 +28,7 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                                                    writer_suffix='cls_log_path')
 
     logger.info('reading dataset...')
-    dataset = DocClsReader(config)
+    dataset = DocRepClsReader(config)
 
     logger.info('constructing model...')
     model = MultiLabelCls(config).to(device)
