@@ -26,7 +26,7 @@ class QTReader:
         self.batch_size = self.config['train']['batch_size']
         self.train_iters = self.config['train']['train_iters']
         self.valid_iters = self.config['train']['valid_iters']
-        self.hierarchical = config['global']['hierarchical']
+        self.hierarchical = config['model']['hierarchical']
 
         self.data = {}
         self.meta_data = {}

@@ -45,9 +45,14 @@ class DocRepQTTrainModel(torch.nn.Module):
 
     def __init__(self, model_config):
         super(DocRepQTTrainModel, self).__init__()
+        hierarchical = model_config['hierarchical']
         self.embedding_layer = get_embedding_layer(model_config)
-        self.tar_doc_encoder = getattr(encoder, model_config['encoder'])(model_config)
-        self.cand_doc_encoder = getattr(encoder, model_config['encoder'])(model_config)
+        if hierarchical:
+            self.tar_doc_encoder = encoder.HLWANEncoder(model_config)
+            self.cand_doc_encoder = encoder.HLWANEncoder(model_config)
+        else:
+            self.tar_doc_encoder = encoder.LWBiGRUEncoder(model_config)
+            self.cand_doc_encoder = encoder.LWBiGRUEncoder(model_config)
 
     def forward(self, tar_d, tar_mask, cand_ds, cand_mask, label):
         # embedding layer
@@ -92,29 +97,24 @@ class DocRepQTTestModel(torch.nn.Module):
 
     def __init__(self, model_config):
         super(DocRepQTTestModel, self).__init__()
-        self.label_size = model_config['label_size']
+        hierarchical = model_config['hierarchical']
         self.embedding_layer = get_embedding_layer(model_config)
-        self.tar_doc_encoder = getattr(encoder, model_config['encoder'])(model_config)
-        self.cand_doc_encoder = getattr(encoder, model_config['encoder'])(model_config)
+        if hierarchical:
+            self.tar_doc_encoder = encoder.HLWANEncoder(model_config)
+            self.cand_doc_encoder = encoder.HLWANEncoder(model_config)
+        else:
+            self.tar_doc_encoder = encoder.LWBiGRUEncoder(model_config)
+            self.cand_doc_encoder = encoder.LWBiGRUEncoder(model_config)
 
     def forward(self, doc, doc_mask):
         # embedding layer
         doc = self.embedding_layer(doc)
 
-        batch = doc.size(0)
-        doc_rep = []
+        # doc encoder layer
+        tar_doc_rep, _ = self.tar_doc_encoder(doc, doc_mask)
+        cand_doc_rep, _ = self.cand_doc_encoder(doc, doc_mask)
 
-        for i in range(self.label_size):
-            cur_label = doc.new_zeros(batch, self.label_size)
-            cur_label[:, i] = 1
-
-            # doc encoder layer
-            tar_doc_rep, _ = self.tar_doc_encoder(doc, doc_mask, cur_label)
-            cand_doc_rep, _ = self.cand_doc_encoder(doc, doc_mask, cur_label)
-
-            # doc representation
-            cur_doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
-            doc_rep.append(cur_doc_rep)
-        doc_rep = torch.stack(doc_rep, dim=1)
+        # doc representation: (batch, label_size, hidden_size * 4)
+        doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
 
         return doc_rep

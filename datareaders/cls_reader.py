@@ -21,7 +21,7 @@ class DocClsReader:
         self.num_workers = config['global']['num_data_workers']
         self.batch_size = config['train']['batch_size']
         self.data_path = config['dataset']['data_path']
-        self.hierarchical = config['global']['hierarchical']
+        self.hierarchical = config['model']['hierarchical']
 
         self.data = {}
         self.meta_data = {}

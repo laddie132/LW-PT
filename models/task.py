@@ -19,7 +19,7 @@ class MultiLabelCls(BaseModule):
         super(MultiLabelCls, self).__init__(
             config,
             name='cls',
-            model=getattr(decoder, config['model']['decoder'])(config['model']))
+            model=decoder.LinearMLC(config['model']))   # use doc-representation to classification
 
     @staticmethod
     def criterion(y_pred, y_true, reduction='mean'):

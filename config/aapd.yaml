@@ -4,7 +4,7 @@ dataset:
   h5_path: data/aapd.h5
   data_path: data/aapd.pickle
   meta_data_path: data/aapd.pickle.meta
-  doc_rep_path: data/aapd_doc_qt_rep.pt-ln-5k
+  doc_rep_path: data/aapd_doc_qt_rep.pt
 
 global:
   random_seed: 123
@@ -15,21 +15,18 @@ global:
   max_doc_length: 500
   cand_doc_size: 4
 
-  hierarchical: False  # same as the model
-
 model:
+  name: HLWAN_QT      # BiGRU, LW_BiGRU, HAN, HANLG, HLWAN, HLWAN_QT
+  hierarchical: True  # same as the model
+
   use_pretrain: True
   embedding_num: 50000
   embedding_dim: 100
   embedding_path: data/rmsc_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
-  name: HLWAN      # BiGRU, HAN, HLWAN
-  encoder: LWBiGRU    # BiGRU, LWBiGRU, HAN, HLWAN
-  decoder: LabelWiseMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
-
   hidden_size: 100
-  label_size: 54    # different with dataset
+  label_size: 22    # different with dataset
   dropout_p: 0.2
   layer_norm: true
 
