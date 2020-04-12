@@ -6,9 +6,6 @@ dataset:
   meta_data_path: data/aapd.pickle.meta
   doc_rep_path: data/aapd_doc_qt_rep.pt-ln-5k
 
-  embedding_path: data/aapd_word2vec.model.wv.vectors.npy
-  embedding_freeze: True
-
 global:
   random_seed: 123
   num_data_workers: 16
@@ -21,12 +18,15 @@ global:
   hierarchical: False  # same as the model
 
 model:
-  encoder: LWBiGRU    # BiGRU, LWBiGRU, HAN, HLWAN
-  decoder: LabelWiseMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
-
   use_pretrain: True
   embedding_num: 50000
   embedding_dim: 100
+  embedding_path: data/rmsc_word2vec.model.wv.vectors.npy
+  embedding_freeze: True
+
+  name: HLWAN      # BiGRU, HAN, HLWAN
+  encoder: LWBiGRU    # BiGRU, LWBiGRU, HAN, HLWAN
+  decoder: LabelWiseMLC  # LinearMLC, LabelGraphMLC, LabelWiseMLC, LabelGraphWiseMLC
 
   hidden_size: 100
   label_size: 54    # different with dataset

@@ -13,7 +13,7 @@ import torch.nn
 import torch.multiprocessing
 import logging
 from models import DAQTRep
-from datareaders import QTBuildReader
+from datareaders import DocClsReader
 from utils.config import init_logging, init_env
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def main(config_path, in_infix, out_infix):
                                                    writer_suffix='qt_log_path')
 
     logger.info('reading dataset...')
-    dataset = QTBuildReader(config)
+    dataset = DocClsReader(config)
 
     logger.info('constructing model...')
     doc_rep_module = DAQTRep(config).to(device)
@@ -57,9 +57,10 @@ def test_on_model(model, dataloader, device):
 
     for batch in tqdm(dataloader, desc='Building...'):
         batch = [x.to(device) if x is not None else x for x in batch]
+        batch_input = batch[:-1]
 
         # forward
-        batch_doc_rep = model.forward(*batch)
+        batch_doc_rep = model.forward(*batch_input)
         all_doc_rep.append(batch_doc_rep)
 
     all_doc_rep = torch.cat(all_doc_rep, dim=0)
@@ -68,9 +69,10 @@ def test_on_model(model, dataloader, device):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='config/config.yaml', help='config path')
     parser.add_argument('--in', dest='in_infix', type=str, default='default', help='input path infix')
     parser.add_argument('--out', type=str, default='default', help='output path infix')
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main('config/config.yaml', in_infix=args.in_infix, out_infix=args.out)
+    main(args.config, in_infix=args.in_infix, out_infix=args.out)

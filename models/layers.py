@@ -7,12 +7,35 @@ __email__ = "liuhan132@foxmail.com"
 """Personalizerd PyTorch Layers"""
 
 import math
+import logging
 import torch
 import torch.nn
 import torch.nn.init as init
 from torch.nn.parameter import Parameter
 from torch.nn import functional as F
+from datareaders.vocabulary import Vocabulary
 from utils.functions import masked_softmax, compute_top_layer_mask
+
+logger = logging.getLogger(__name__)
+
+
+def get_embedding_layer(model_config):
+    embedding_num = model_config['embedding_num']
+    embedding_dim = model_config['embedding_dim']
+    embedding_path = model_config['embedding_path']
+    embedding_freeze = model_config['embedding_freeze']
+
+    if not model_config['use_pretrain']:
+        embedding_layer = torch.nn.Embedding(num_embeddings=embedding_num,
+                                             embedding_dim=embedding_dim,
+                                             padding_idx=Vocabulary.PAD_IDX)
+    else:
+        embedding_weight = Vocabulary.load_emb(embedding_path)
+        logger.info('Embedding shape: ' + str(embedding_weight.shape))
+        embedding_layer = torch.nn.Embedding.from_pretrained(embedding_weight,
+                                                             freeze=embedding_freeze,
+                                                             padding_idx=Vocabulary.PAD_IDX)
+    return embedding_layer
 
 
 class HierarchicalAttention(torch.nn.Module):
@@ -27,6 +50,7 @@ class HierarchicalAttention(torch.nn.Module):
         x_top_att_rep (batch, hidden_size):
         x_top_prop (batch, top_len):
     """
+
     def __init__(self, hidden_size, dropout_p):
         super(HierarchicalAttention, self).__init__()
         self.sub_attention = LinearAttention(hidden_size, dropout_p)
@@ -61,6 +85,7 @@ class LinearAttention(torch.nn.Module):
         x_att_rep: (batch, hidden_size)
         x_prop: (batch, len)
     """
+
     def __init__(self, hidden_size, dropout_p):
         super(LinearAttention, self).__init__()
 
@@ -149,12 +174,12 @@ class MultiHeadSelfAttention(torch.nn.Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x, label, x_mask=None):
-        cur_weight = torch.mm(label.float(), self.weight).unsqueeze(-1)     # (batch, in_features, 1)
+        cur_weight = torch.mm(label.float(), self.weight).unsqueeze(-1)  # (batch, in_features, 1)
         cur_bias = None
         if self.bias is not None:
-            cur_bias = torch.mm(label.float(), self.bias.unsqueeze(-1))     # (batch, 1)
+            cur_bias = torch.mm(label.float(), self.bias.unsqueeze(-1))  # (batch, 1)
 
-        x_alpha = torch.bmm(x, cur_weight).squeeze(-1)      # (batch, len)
+        x_alpha = torch.bmm(x, cur_weight).squeeze(-1)  # (batch, len)
         if cur_bias is not None:
             x_alpha += cur_bias
 
@@ -261,7 +286,7 @@ class MyRNNBase(torch.nn.Module):
 
         # get the last time state
         if isinstance(o_last, tuple):
-            o_last = o_last[0]    # if LSTM cell used
+            o_last = o_last[0]  # if LSTM cell used
 
         _, batch, hidden_size = o_last.size()
         o_last = o_last.view(self.num_layers, -1, batch, hidden_size)
@@ -304,6 +329,7 @@ class TransformerModel(torch.nn.Module):
     Outputs:
         output (batch, nhid)
     """
+
     def __init__(self, nemb, nhead, nhid, nlayers, dropout):
         super(TransformerModel, self).__init__()
         self.model_type = 'Transformer'
@@ -317,7 +343,7 @@ class TransformerModel(torch.nn.Module):
         self.doc_attention = SelfAttention(in_features=nemb)
 
     def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1).float()    # must be float
+        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1).float()  # must be float
         mask = mask.masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
@@ -325,7 +351,7 @@ class TransformerModel(torch.nn.Module):
         visual_parm = {}
 
         src = src.transpose(0, 1)
-        src_key_padding_mask = (1 - src_key_value_mask).bool()    # mask different with input
+        src_key_padding_mask = (1 - src_key_value_mask).bool()  # mask different with input
 
         # only allowed to attend the earlier positions in the sequence
         # if self.src_mask is None or self.src_mask.size(0) != len(src):
@@ -357,6 +383,7 @@ class PositionalEncoding(torch.nn.Module):
     Outputs:
         output (seq_len, batch, nemb)
     """
+
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = torch.nn.Dropout(p=dropout)

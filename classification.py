@@ -12,8 +12,8 @@ import torch
 import torch.nn
 import torch.multiprocessing
 import logging
-from models import MultiLabelCls
-from datareaders import DocRepClsReader
+from models import *
+from datareaders import *
 from utils.functions import get_optimizer
 from utils.metrics import *
 from utils.config import init_logging, init_env
@@ -28,10 +28,12 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                                                    writer_suffix='cls_log_path')
 
     logger.info('reading dataset...')
-    dataset = DocRepClsReader(config)
+    # dataset = DocRepClsReader(config)
+    dataset = DocClsReader(config)
 
     logger.info('constructing model...')
-    model = MultiLabelCls(config).to(device)
+    # model = MultiLabelCls(config).to(device)
+    model = E2EMultiLabelCls(config).to(device)
     model.load_parameters(enable_cuda)
 
     # loss function
@@ -71,20 +73,15 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                 metrics = eval_on_model(model=model,
                                         batch_data=valid_data,
                                         device=device)
-            logger.info("epoch=%d, valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%, "
-                        "valid_hamming_loss=%.3f, valid_one_error=%.2f%%" %
-                        (epoch, metrics['macro_f1'] * 100, metrics['micro_f1'] * 100,
-                         metrics['hamming_loss'], metrics['one_error'] * 100))
+            logger.info('epoch={}: '.format(epoch) + print_metrics(metrics, stage='valid'))
 
-            if best_metrics is None or metrics['macro_f1'] > best_metrics['macro_f1']:
+            # save best model with maximum micro-f1
+            if best_metrics is None or metrics['micro_f1'] > best_metrics['micro_f1']:
                 model.save_parameters(epoch)
 
                 best_metrics = metrics
                 best_epoch = epoch
-        logging.info('best epoch=%d: valid_macro_f1=%.2f%%, valid_micro_f1=%.2f%%, '
-                     'valid_hamming_loss=%.3f, valid_one_error=%.2f%%'
-                     % (best_epoch, best_metrics['macro_f1'] * 100, best_metrics['micro_f1'] * 100,
-                        best_metrics['hamming_loss'], best_metrics['one_error'] * 100))
+        logging.info('best epoch={}: '.format(best_epoch) + print_metrics(best_metrics, stage='valid'))
 
     if is_test:
         logger.info('start testing...')
@@ -96,12 +93,20 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
             metrics = eval_on_model(model=model,
                                     batch_data=test_data,
                                     device=device)
-        logger.info("test_macro_f1=%.2f%%, test_micro_f1=%.2f%%, test_hamming_loss=%.3f, test_one_error=%.2f%%" %
-                    (metrics['macro_f1'] * 100, metrics['micro_f1'] * 100,
-                     metrics['hamming_loss'], metrics['one_error'] * 100))
+        logger.info(print_metrics(metrics, stage='test'))
 
     writer.close()
     logger.info('finished.')
+
+
+def print_metrics(metrics, stage='test'):
+    out = "{stage}_macro_f1={macro_f1:.2%}, {stage}_micro_f1={micro_f1:.2%}, " \
+          "{stage}_micro_p={micro_p:.2%}, {stage}_micro_r={micro_r:.2%}, " \
+          "{stage}_hamming_loss={hl:.3f}, {stage}_one_error={oe:.2%}" \
+        .format(stage=stage, macro_f1=metrics['macro_f1'], micro_f1=metrics['micro_f1'],
+                micro_p=metrics['micro_p'], micro_r=metrics['micro_r'],
+                hl=metrics['hamming_loss'], oe=metrics['one_error'])
+    return out
 
 
 def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max,
@@ -123,7 +128,7 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         loss.backward()
 
         # evaluate
-        macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
+        macro_f1, micro_f1, micro_p, micro_r = evaluate_f1_ml(predict, truth)
         hamming_loss = evaluate_hamming_loss(predict, truth)
         one_error = evaluate_one_error(predict, truth)
 
@@ -136,6 +141,8 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         writer.add_scalar('Train-Step-Loss', batch_loss, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-Macro_F1', macro_f1, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-Micro_F1', micro_f1, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-Micro_P', micro_p, global_step=epoch * batch_cnt + i)
+        writer.add_scalar('Train-Step-Micro_R', micro_r, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-Hamming_Loss', hamming_loss, global_step=epoch * batch_cnt + i)
         writer.add_scalar('Train-Step-One_Error', one_error, global_step=epoch * batch_cnt + i)
 
@@ -159,12 +166,14 @@ def eval_on_model(model, batch_data, device):
 
     predict = torch.cat(all_predict, dim=0)
     truth = torch.cat(all_truth, dim=0)
-    macro_f1, micro_f1 = evaluate_f1_ml(predict, truth)
+    macro_f1, micro_f1, micro_p, micro_r = evaluate_f1_ml(predict, truth)
     hamming_loss = evaluate_hamming_loss(predict, truth)
     one_error = evaluate_one_error(predict, truth)
 
     metrics = {'macro_f1': macro_f1,
                'micro_f1': micro_f1,
+               'micro_p': micro_p,
+               'micro_r': micro_r,
                'hamming_loss': hamming_loss,
                'one_error': one_error}
     return metrics
@@ -172,6 +181,7 @@ def eval_on_model(model, batch_data, device):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='config/config.yaml', help='config path')
     parser.add_argument('--in', dest='in_infix', type=str, default='default', help='input data_path infix')
     parser.add_argument('--out', type=str, default='default', help='output data_path infix')
     parser.add_argument('--train', action='store_true', default=False, help='enable train step')
@@ -179,4 +189,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main('config/config.yaml', args.in_infix, args.out, is_train=args.train, is_test=args.test)
+    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test)

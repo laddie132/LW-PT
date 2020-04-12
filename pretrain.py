@@ -147,6 +147,7 @@ def eval_on_model(model, dataloader, device):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default='config/config.yaml', help='config path')
     parser.add_argument('--in', dest='in_infix', type=str, default='default', help='input data_path infix')
     parser.add_argument('--out', type=str, default='default', help='output data_path infix')
     parser.add_argument('--train', action='store_true', default=False, help='enable train step')
@@ -154,4 +155,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main('config/config.yaml', args.in_infix, args.out, is_train=args.train, is_test=args.test)
+    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test)

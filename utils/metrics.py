@@ -80,7 +80,7 @@ def evaluate_f1_ml(predict, truth):
     micro_recall = division(sum(label_same), sum(label_truth))
     micro_f1 = f1(micro_precision, micro_recall)
 
-    return macro_f1, micro_f1
+    return macro_f1, micro_f1, micro_precision, micro_recall
 
 
 def evaluate_hamming_loss(predict, truth):

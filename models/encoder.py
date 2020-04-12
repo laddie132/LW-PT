@@ -7,48 +7,7 @@ __email__ = "liuhan132@foxmail.com"
 from .layers import *
 
 
-class BiGRU(torch.nn.Module):
-    """
-    Bidirectional GRU encoder on word-level for document representation
-    Inputs:
-        doc_emb: (batch, doc_len, emb_dim)
-        doc_mask: (batch, doc_len)
-        label: (batch, label_size)
-    Outputs:
-        doc_rep: (batch, hidden_size * 2)
-    """
-    def __init__(self, model_config):
-        super(BiGRU, self).__init__()
-
-        embedding_dim = model_config['embedding_dim']
-        hidden_size = model_config['hidden_size']
-        dropout_p = model_config['dropout_p']
-        enable_layer_norm = model_config['layer_norm']
-
-        self.doc_rnn = MyRNNBase(mode='GRU',
-                                 input_size=embedding_dim,
-                                 hidden_size=hidden_size,
-                                 bidirectional=True,
-                                 dropout_p=dropout_p,
-                                 enable_layer_norm=enable_layer_norm,
-                                 batch_first=True,
-                                 num_layers=1)
-        self.doc_attention = SelfAttention(in_features=hidden_size * 2)
-
-    def forward(self, doc_emb, doc_mask):
-        visual_parm = {}
-
-        # (batch, doc_len, hidden_size * 2)
-        doc_rep, _ = self.doc_word_rnn(doc_emb, doc_mask)
-
-        # (batch, hidden_size * 2)
-        doc_rep, doc_word_att_p = self.doc_attention(doc_rep, doc_mask)
-        visual_parm['doc_word_att_p'] = doc_word_att_p
-
-        return doc_rep, visual_parm
-
-
-class LWBiGRU(torch.nn.Module):
+class LWBiGRUEncoder(torch.nn.Module):
     """
     Label-Wise Bidirectional GRU encoder on word-level for document representation
     Inputs:
@@ -59,7 +18,7 @@ class LWBiGRU(torch.nn.Module):
         doc_rep: (batch, hidden_size * 2)
     """
     def __init__(self, model_config):
-        super(LWBiGRU, self).__init__()
+        super(LWBiGRUEncoder, self).__init__()
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']
@@ -91,7 +50,7 @@ class LWBiGRU(torch.nn.Module):
         return doc_rep, visual_parm
 
 
-class HLWAN(torch.nn.Module):
+class HLWANEncoder(torch.nn.Module):
     """
     Hierarchical Label-Wise Attention Network for document representation
     Inputs:
@@ -103,7 +62,7 @@ class HLWAN(torch.nn.Module):
     """
 
     def __init__(self, model_config):
-        super(HLWAN, self).__init__()
+        super(HLWANEncoder, self).__init__()
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']
@@ -164,7 +123,48 @@ class HLWAN(torch.nn.Module):
         return doc_rep, visual_parm
 
 
-class HAN(torch.nn.Module):
+class BiGRUEncoder(torch.nn.Module):
+    """
+    Bidirectional GRU encoder on word-level for document representation
+    Inputs:
+        doc_emb: (batch, doc_len, emb_dim)
+        doc_mask: (batch, doc_len)
+        label: (batch, label_size)
+    Outputs:
+        doc_rep: (batch, hidden_size * 2)
+    """
+    def __init__(self, model_config):
+        super(BiGRUEncoder, self).__init__()
+
+        embedding_dim = model_config['embedding_dim']
+        hidden_size = model_config['hidden_size']
+        dropout_p = model_config['dropout_p']
+        enable_layer_norm = model_config['layer_norm']
+
+        self.doc_rnn = MyRNNBase(mode='GRU',
+                                 input_size=embedding_dim,
+                                 hidden_size=hidden_size,
+                                 bidirectional=True,
+                                 dropout_p=dropout_p,
+                                 enable_layer_norm=enable_layer_norm,
+                                 batch_first=True,
+                                 num_layers=1)
+        self.doc_attention = SelfAttention(in_features=hidden_size * 2)
+
+    def forward(self, doc_emb, doc_mask):
+        visual_parm = {}
+
+        # (batch, doc_len, hidden_size * 2)
+        doc_rep, _ = self.doc_word_rnn(doc_emb, doc_mask)
+
+        # (batch, hidden_size * 2)
+        doc_rep, doc_word_att_p = self.doc_attention(doc_rep, doc_mask)
+        visual_parm['doc_word_att_p'] = doc_word_att_p
+
+        return doc_rep, visual_parm
+
+
+class HANEncoder(torch.nn.Module):
     """
     Hierarchical Attention Network for document representation
     Inputs:
@@ -175,7 +175,7 @@ class HAN(torch.nn.Module):
     """
 
     def __init__(self, model_config):
-        super(HAN, self).__init__()
+        super(HANEncoder, self).__init__()
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']

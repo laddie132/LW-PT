@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class BaseModule(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, config, name, model):
         super(BaseModule, self).__init__()
-        self.model = None
+        self.model = model
 
-        self.in_checkpoint_path = None
-        self.in_weight_path = None
-        self.out_checkpoint_path = None
-        self.out_weight_path = None
+        self.in_checkpoint_path = config['checkpoint']['in_{}_checkpoint_path'.format(name)]
+        self.in_weight_path = config['checkpoint']['in_{}_weight_path'.format(name)]
+        self.out_checkpoint_path = config['checkpoint']['out_{}_checkpoint_path'.format(name)]
+        self.out_weight_path = config['checkpoint']['out_{}_weight_path'.format(name)]
 
     def forward(self, *args):
         out = self.model(*args)
