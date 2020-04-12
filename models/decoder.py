@@ -9,16 +9,8 @@ import torch.nn
 
 
 class LinearMLC(torch.nn.Module):
-    def __init__(self, model_config, qt=True):
+    def __init__(self, input_size, label_size):
         super(LinearMLC, self).__init__()
-        hidden_size = model_config['hidden_size']
-        label_size = model_config['label_size']
-
-        if qt:
-            input_size = hidden_size * 4 * label_size
-        else:
-            input_size = hidden_size * 2
-
         self.cls_layer = torch.nn.Linear(input_size, label_size)
 
     def forward(self, doc_rep):
@@ -29,12 +21,8 @@ class LinearMLC(torch.nn.Module):
 
 
 class LabelGraphMLC(torch.nn.Module):
-    def __init__(self, model_config, qt=True):
+    def __init__(self, input_size, label_size):
         super(LabelGraphMLC, self).__init__()
-        hidden_size = model_config['hidden_size']
-        label_size = model_config['label_size']
-
-        input_size = hidden_size * 4 * label_size if qt else hidden_size * 2
         self.cls_layer = torch.nn.Linear(input_size, label_size)
         self.label_graph = torch.nn.Parameter(torch.eye(label_size),
                                               requires_grad=True)
@@ -49,12 +37,9 @@ class LabelGraphMLC(torch.nn.Module):
 
 
 class LabelWiseMLC(torch.nn.Module):
-    def __init__(self, model_config, qt=True):
+    def __init__(self, input_size, label_size):
         super(LabelWiseMLC, self).__init__()
-        hidden_size = model_config['hidden_size']
-        self.label_size = model_config['label_size']
-
-        input_size = hidden_size * 4 if qt else hidden_size * 2
+        self.label_size = label_size
         self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(input_size, 1)
                                               for _ in range(self.label_size)])
 
@@ -67,12 +52,9 @@ class LabelWiseMLC(torch.nn.Module):
 
 
 class LabelGraphWiseMLC(torch.nn.Module):
-    def __init__(self, model_config, qt=True):
+    def __init__(self, input_size, label_size):
         super(LabelGraphWiseMLC, self).__init__()
-        hidden_size = model_config['hidden_size']
-        self.label_size = model_config['label_size']
-
-        input_size = hidden_size * 4 if qt else hidden_size * 2
+        self.label_size = label_size
         self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(input_size, 1)
                                               for _ in range(self.label_size)])
         self.label_graph = torch.nn.Parameter(torch.eye(self.label_size),

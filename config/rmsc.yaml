@@ -16,7 +16,7 @@ global:
   cand_doc_size: 4
 
 model:
-  name: HANLG      # BiGRU, LW_BiGRU, HAN, HANLG, HLWAN, HLWAN_QT
+  name: HLWAN_QT      # BiGRU, LW_BiGRU, HAN, HANLG, HLWAN, HLWAN_QT
   hierarchical: True  # same as the model
 
   use_pretrain: True

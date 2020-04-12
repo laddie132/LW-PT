@@ -50,7 +50,7 @@ class E2EMultiLabelCls(BaseModule):
     def __init__(self, config):
         super(E2EMultiLabelCls, self).__init__(
             config,
-            name='cls',
+            name='qt',      # TODO: dynamically changed
             model=getattr(e2e, config['model']['name'])(config['model']))
 
 
