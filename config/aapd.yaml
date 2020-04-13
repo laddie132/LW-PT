@@ -16,23 +16,23 @@ global:
   cand_doc_size: 4
 
 model:
-  name: HLWAN_QT      # BiGRU, LW_BiGRU, HAN, HANLG, HLWAN, HLWAN_QT
-  hierarchical: True  # same as the model
+  name: LW_BiGRU_QT      # BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT
+  hierarchical: False  # same as the model
 
   use_pretrain: True
   embedding_num: 50000
-  embedding_dim: 100
-  embedding_path: data/rmsc_word2vec.model.wv.vectors.npy
+  embedding_dim: 256
+  embedding_path: data/aapd_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
-  hidden_size: 100
-  label_size: 22    # different with dataset
+  hidden_size: 256
+  label_size: 54    # different with dataset
   dropout_p: 0.2
   layer_norm: true
 
 train:
   num_epochs: 30
-  train_iters: 5000
+  train_iters: 20000
   valid_iters: 50
   test_iters: 1000
 

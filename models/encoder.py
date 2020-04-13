@@ -136,12 +136,12 @@ class HLWANEncoder(torch.nn.Module):
             doc_rep = doc_rep.view(batch, label_size, label_size, -1)
             select_idx = torch.eye(label_size, device=doc_rep.device).unsqueeze(-1).\
                 repeat(batch, 1, 1, hsize).bool()
-            doc_rep = doc_rep[select_idx].reshape(batch, label_size, -1)    # (batch, label_size, h * 2)
+            doc_rep = doc_rep[select_idx].view(batch, label_size, -1)    # (batch, label_size, h * 2)
 
             doc_sent_att_p = doc_sent_att_p.view(batch, label_size, label_size, -1)
             select_idx = torch.eye(label_size, device=doc_rep.device).unsqueeze(-1).\
                 repeat(batch, 1, 1, doc_sent_len).bool()
-            doc_sent_att_p = doc_sent_att_p[select_idx].reshape(batch, label_size, -1)  # (batch, label_size, len)
+            doc_sent_att_p = doc_sent_att_p[select_idx].view(batch, label_size, -1)  # (batch, label_size, len)
 
         visual_parm['doc_sent_att_p'] = doc_sent_att_p
 

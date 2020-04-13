@@ -25,11 +25,9 @@ class AAPD(BaseDataset):
                                    save_data_path='data/aapd.pickle',
                                    save_meta_data_path='data/aapd.pickle.meta',
                                    save_w2v_path='data/aapd_word2vec.model',
-                                   emb_dim=100,
+                                   emb_dim=256,
                                    max_vocab_size=None,
                                    random_seed=random_seed)
-        self.max_sent = 40
-        self.max_word = 20
         self.max_doc_length = 500
 
         self.data_path = 'data/aapd' if data_path is '' else data_path

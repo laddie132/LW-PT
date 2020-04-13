@@ -39,32 +39,30 @@ class LabelGraphMLC(torch.nn.Module):
 class LabelWiseMLC(torch.nn.Module):
     def __init__(self, input_size, label_size):
         super(LabelWiseMLC, self).__init__()
-        self.label_size = label_size
-        self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(input_size, 1)
-                                              for _ in range(self.label_size)])
+        self.cls_layer = torch.nn.Linear(input_size, label_size)
 
     def forward(self, doc_rep):
-        doc_sig = []
-        for i in range(self.label_size):
-            doc_sig.append(torch.sigmoid(self.cls_layer[i](doc_rep[:, i, :])))
-        doc_sig = torch.cat(doc_sig, dim=-1)
+        batch, label_size, _ = doc_rep.size()
+        doc_label = self.cls_layer(doc_rep)     # (batch, label_size, label_size)
+        select_idx = torch.eye(label_size, device=doc_rep.device).repeat(batch, 1, 1).bool()
+        doc_label = doc_label[select_idx].view(batch, label_size)
+
+        doc_sig = torch.sigmoid(doc_label)
         return doc_sig
 
 
-class LabelGraphWiseMLC(torch.nn.Module):
+class LabelWiseGraphMLC(torch.nn.Module):
     def __init__(self, input_size, label_size):
-        super(LabelGraphWiseMLC, self).__init__()
-        self.label_size = label_size
-        self.cls_layer = torch.nn.ModuleList([torch.nn.Linear(input_size, 1)
-                                              for _ in range(self.label_size)])
+        super(LabelWiseGraphMLC, self).__init__()
+        self.cls_layer = torch.nn.Linear(input_size, label_size)
         self.label_graph = torch.nn.Parameter(torch.eye(self.label_size),
                                               requires_grad=True)
 
     def forward(self, doc_rep):
-        doc_cls = []
-        for i in range(self.label_size):
-            doc_cls.append(self.cls_layer[i](doc_rep[:, i, :]))
-        doc_cls = torch.cat(doc_cls, dim=-1)
+        batch, label_size, _ = doc_rep.size()
+        doc_label = self.cls_layer(doc_rep)  # (batch, label_size, label_size)
+        select_idx = torch.eye(label_size, device=doc_rep.device).repeat(batch, 1, 1).bool()
+        doc_label = doc_label[select_idx].view(batch, label_size)
 
-        out_label = torch.sigmoid(doc_cls.mm(self.label_graph))
+        out_label = torch.sigmoid(doc_label.mm(self.label_graph))
         return out_label

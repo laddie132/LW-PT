@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 def init_env(config_path, in_infix, out_infix, writer_suffix):
-    logger.info('loading config file...')
+    logger.info('loading config file: {}'.format(config_path))
+    logger.info('in_infix: {}'.format(in_infix))
+    logger.info('out_infix: {}'.format(out_infix))
     game_config = read_config(config_path, in_infix, out_infix)
 
     # config in logs
