@@ -14,7 +14,6 @@ from datareaders import QTReader
 from utils.optims import Optim
 from utils.config import init_logging, init_env
 from utils.metrics import evaluate_acc
-from pytorch_memlab import MemReporter
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +29,6 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
     logger.info('constructing model...')
     model = DAQT(config).to(device)
     model.load_parameters(enable_cuda)
-
-    # debug: show using memory
-    # reporter = MemReporter(model)
-    # reporter.report()
 
     # loss function
     criterion = torch.nn.NLLLoss()
@@ -53,6 +48,7 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
 
         save_steps = config['train']['save_steps']
         eval_steps = config['train']['eval_steps']
+        decay_steps = config['train']['decay_steps']
 
         # train
         model.train()  # set training = True, make sure right dropout
@@ -64,7 +60,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
                        device=device,
                        writer=writer,
                        save_steps=save_steps,
-                       eval_steps=eval_steps)
+                       eval_steps=eval_steps,
+                       decay_steps=decay_steps)
 
     if is_test:
         logger.info('start testing...')
@@ -81,7 +78,7 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
 
 
 def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
-                   device, writer, save_steps, eval_steps):
+                   device, writer, save_steps, eval_steps, decay_steps):
     num_iters = len(dataloader)
     for step_i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc='Training...'):
         step_i += 1
@@ -121,8 +118,9 @@ def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
             writer.add_scalar('Train-Valid-Acc', valid_acc, global_step=step_i)
             logger.info("Step %d: valid_acc=%.2f%%" % (step_i, valid_acc * 100))
 
-        # TODO: learning rate decay on steps
-        # optimizer.updateLearningRate(epoch)  # learning rate decay
+        # learning rate decay on steps
+        if step_i % decay_steps == 0:
+            optimizer.updateLearningRate(step_i)  # learning rate decay
 
 
 def eval_on_model(model, dataloader, device):

@@ -46,3 +46,4 @@ train:
 
   learning_rate_decay: 0.5
   start_decay_at: 2
+  decay_steps: 1000
