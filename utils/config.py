@@ -8,6 +8,7 @@ import os
 import sys
 import yaml
 import json
+import torch.backends.cudnn
 import torch.multiprocessing
 from torch.utils.tensorboard import SummaryWriter
 import logging
@@ -17,7 +18,7 @@ from utils.functions import set_seed
 logger = logging.getLogger(__name__)
 
 
-def init_env(config_path, in_infix, out_infix, writer_suffix):
+def init_env(config_path, in_infix, out_infix, writer_suffix, gpuid=None):
     logger.info('loading config file: {}'.format(config_path))
     logger.info('in_infix: {}'.format(in_infix))
     logger.info('out_infix: {}'.format(out_infix))
@@ -33,9 +34,14 @@ def init_env(config_path, in_infix, out_infix, writer_suffix):
     # set random seed
     set_seed(game_config['global']['random_seed'])
 
-    enable_cuda = torch.cuda.is_available()
+    # gpu
+    enable_cuda = torch.cuda.is_available() and gpuid is not None
     device = torch.device("cuda" if enable_cuda else "cpu")
-    logger.info("CUDA is avaliable" if enable_cuda else "CUDA isn't avaliable")
+    if enable_cuda:
+        torch.cuda.set_device(gpuid)
+        torch.backends.cudnn.deterministic = True
+    logger.info("CUDA #{} is avaliable".format(gpuid)
+                if enable_cuda else "CUDA isn't avaliable")
 
     # summary writer
     writer = SummaryWriter(log_dir=game_config['checkpoint'][writer_suffix])

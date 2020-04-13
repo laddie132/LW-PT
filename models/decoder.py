@@ -55,7 +55,7 @@ class LabelWiseGraphMLC(torch.nn.Module):
     def __init__(self, input_size, label_size):
         super(LabelWiseGraphMLC, self).__init__()
         self.cls_layer = torch.nn.Linear(input_size, label_size)
-        self.label_graph = torch.nn.Parameter(torch.eye(self.label_size),
+        self.label_graph = torch.nn.Parameter(torch.eye(label_size),
                                               requires_grad=True)
 
     def forward(self, doc_rep):

@@ -14,18 +14,18 @@ import torch.multiprocessing
 import logging
 from models import *
 from datareaders import *
-from utils.functions import get_optimizer
+from utils.optims import Optim
 from utils.metrics import *
 from utils.config import init_logging, init_env
 
 logger = logging.getLogger(__name__)
 
 
-def main(config_path, in_infix, out_infix, is_train, is_test):
+def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
     logger.info('-------------Multi-Label Classification---------------')
     logger.info('initial environment...')
     config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                   writer_suffix='cls_log_path')
+                                                   writer_suffix='cls_log_path', gpuid=gpuid)
 
     logger.info('reading dataset...')
     # dataset = DocRepClsReader(config)
@@ -38,9 +38,12 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
     # loss function
     criterion = MultiLabelCls.criterion
-    optimizer = get_optimizer(config['train']['optimizer'],
-                              config['train']['learning_rate'],
-                              model.parameters())
+    optimizer = Optim(config['train']['optimizer'],
+                      lr=config['train']['learning_rate'],
+                      max_grad_norm=config['train']['clip_grad_norm'],
+                      lr_decay=config['train']['learning_rate_decay'],
+                      start_decay_at=config['train']['start_decay_at'])
+    optimizer.set_parameters(model.parameters())
 
     # dataset
     train_data = dataset.get_dataloader_train()
@@ -51,7 +54,6 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
         logger.info('start training...')
 
         num_epochs = config['train']['num_epochs']
-        clip_grad_max = config['train']['clip_grad_norm']
 
         best_metrics = None
         best_epoch = 0
@@ -64,9 +66,10 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                            criterion=criterion,
                            optimizer=optimizer,
                            batch_data=train_data,
-                           clip_grad_max=clip_grad_max,
                            device=device,
                            writer=writer)
+            optimizer.updateLearningRate(epoch)     # learning rate decay
+
             # evaluate
             with torch.no_grad():
                 model.eval()  # let training = False, make sure right dropout
@@ -102,19 +105,18 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 def print_metrics(metrics, stage='test'):
     out = "{stage}_macro_f1={macro_f1:.2%}, {stage}_micro_f1={micro_f1:.2%}, " \
           "{stage}_micro_p={micro_p:.2%}, {stage}_micro_r={micro_r:.2%}, " \
-          "{stage}_hamming_loss={hl:.3f}, {stage}_one_error={oe:.2%}" \
+          "{stage}_hamming_loss={hl:.4f}, {stage}_one_error={oe:.2%}" \
         .format(stage=stage, macro_f1=metrics['macro_f1'], micro_f1=metrics['micro_f1'],
                 micro_p=metrics['micro_p'], micro_r=metrics['micro_r'],
                 hl=metrics['hamming_loss'], oe=metrics['one_error'])
     return out
 
 
-def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max,
-                   device, writer):
+def train_on_model(epoch, model, criterion, optimizer, batch_data, device, writer):
     batch_cnt = len(batch_data)
     sum_loss = 0.
     for i, batch in tqdm(enumerate(batch_data), total=batch_cnt, desc='Training Epoch=%d' % epoch):
-        optimizer.zero_grad()
+        model.zero_grad()
 
         # batch data
         batch = [x.to(device) if x is not None else x for x in batch]
@@ -132,7 +134,6 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, clip_grad_max
         hamming_loss = evaluate_hamming_loss(predict, truth)
         one_error = evaluate_one_error(predict, truth)
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
         optimizer.step()  # update parameters
 
         # logging
@@ -186,7 +187,8 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=str, default='default', help='output data_path infix')
     parser.add_argument('--train', action='store_true', default=False, help='enable train step')
     parser.add_argument('--test', action='store_true', default=False, help='enable test step')
+    parser.add_argument('--gpuid', type=int, default=None, help='gpuid')
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test)
+    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test, gpuid=args.gpuid)

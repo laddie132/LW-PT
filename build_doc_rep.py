@@ -19,11 +19,11 @@ from utils.config import init_logging, init_env
 logger = logging.getLogger(__name__)
 
 
-def main(config_path, in_infix, out_infix):
+def main(config_path, in_infix, out_infix, gpuid):
     logger.info('-------------Doc-Rep Pre-building---------------')
     logger.info('initial environment...')
     config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                   writer_suffix='qt_log_path')
+                                                   writer_suffix='qt_log_path', gpuid=gpuid)
 
     logger.info('reading dataset...')
     dataset = DocClsReader(config)
@@ -72,7 +72,8 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default='config/config.yaml', help='config path')
     parser.add_argument('--in', dest='in_infix', type=str, default='default', help='input path infix')
     parser.add_argument('--out', type=str, default='default', help='output path infix')
+    parser.add_argument('--gpuid', type=int, default=None, help='gpuid')
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main(args.config, in_infix=args.in_infix, out_infix=args.out)
+    main(args.config, in_infix=args.in_infix, out_infix=args.out, gpuid=args.gpuid)

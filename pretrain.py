@@ -11,7 +11,7 @@ import logging
 from tqdm import tqdm
 from models import DAQT
 from datareaders import QTReader
-from utils.functions import get_optimizer
+from utils.optims import Optim
 from utils.config import init_logging, init_env
 from utils.metrics import evaluate_acc
 from pytorch_memlab import MemReporter
@@ -19,11 +19,11 @@ from pytorch_memlab import MemReporter
 logger = logging.getLogger(__name__)
 
 
-def main(config_path, in_infix, out_infix, is_train, is_test):
+def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
     logger.info('-------------DA-QT Pre-Training---------------')
     logger.info('initial environment...')
     config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                   writer_suffix='qt_log_path')
+                                                   writer_suffix='qt_log_path', gpuid=gpuid)
     logger.info('reading dataset...')
     dataset = QTReader(config)
 
@@ -37,9 +37,12 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
     # loss function
     criterion = torch.nn.NLLLoss()
-    optimizer = get_optimizer(config['train']['optimizer'],
-                              config['train']['learning_rate'],
-                              model.parameters())
+    optimizer = Optim(config['train']['optimizer'],
+                      lr=config['train']['learning_rate'],
+                      max_grad_norm=config['train']['clip_grad_norm'],
+                      lr_decay=config['train']['learning_rate_decay'],
+                      start_decay_at=config['train']['start_decay_at'])
+    optimizer.set_parameters(model.parameters())
 
     # dataset loader
     batch_train_data = dataset.get_dataloader_train()
@@ -48,7 +51,6 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
     if is_train:
         logger.info('start training...')
 
-        clip_grad_max = config['train']['clip_grad_norm']
         save_steps = config['train']['save_steps']
         eval_steps = config['train']['eval_steps']
 
@@ -59,7 +61,6 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
                        optimizer=optimizer,
                        dataloader=batch_train_data,
                        valid_dataloader=batch_valid_data,
-                       clip_grad_max=clip_grad_max,
                        device=device,
                        writer=writer,
                        save_steps=save_steps,
@@ -80,11 +81,11 @@ def main(config_path, in_infix, out_infix, is_train, is_test):
 
 
 def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
-                   clip_grad_max, device, writer, save_steps, eval_steps):
+                   device, writer, save_steps, eval_steps):
     num_iters = len(dataloader)
     for step_i, batch in tqdm(enumerate(dataloader), total=len(dataloader), desc='Training...'):
         step_i += 1
-        optimizer.zero_grad()
+        model.zero_grad()
 
         # batch data
         batch = [x.to(device) if x is not None else x for x in batch]
@@ -100,8 +101,6 @@ def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
 
         # evaluate
         batch_acc, batch_eq_num = evaluate_acc(cls_predict, cls_truth)
-
-        torch.nn.utils.clip_grad_norm_(model.parameters(), clip_grad_max)  # fix gradient explosion
         optimizer.step()  # update parameters
 
         # logging
@@ -121,6 +120,9 @@ def train_on_model(model, criterion, optimizer, dataloader, valid_dataloader,
                                           device=device)
             writer.add_scalar('Train-Valid-Acc', valid_acc, global_step=step_i)
             logger.info("Step %d: valid_acc=%.2f%%" % (step_i, valid_acc * 100))
+
+        # TODO: learning rate decay on steps
+        # optimizer.updateLearningRate(epoch)  # learning rate decay
 
 
 def eval_on_model(model, dataloader, device):
@@ -152,7 +154,8 @@ if __name__ == '__main__':
     parser.add_argument('--out', type=str, default='default', help='output data_path infix')
     parser.add_argument('--train', action='store_true', default=False, help='enable train step')
     parser.add_argument('--test', action='store_true', default=False, help='enable test step')
+    parser.add_argument('--gpuid', type=int, default=None, help='gpuid')
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)
-    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test)
+    main(args.config, args.in_infix, args.out, is_train=args.train, is_test=args.test, gpuid=args.gpuid)

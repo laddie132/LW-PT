@@ -27,11 +27,11 @@ model:
 
   hidden_size: 256
   label_size: 54    # different with dataset
-  dropout_p: 0.2
+  dropout_p: 0.1
   layer_norm: true
 
 train:
-  num_epochs: 30
+  num_epochs: 10
   train_iters: 20000
   valid_iters: 50
   test_iters: 1000
@@ -39,7 +39,10 @@ train:
   eval_steps: 100
   save_steps: 1000
 
-  batch_size: 32
-  optimizer: adamax   # adam, sgd, adamax
+  batch_size: 64
+  optimizer: adam   # adam, sgd, adamax
   learning_rate: 0.001
   clip_grad_norm: 5
+
+  learning_rate_decay: 0.5
+  start_decay_at: 2

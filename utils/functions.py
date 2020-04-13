@@ -237,25 +237,6 @@ def masked_softmax(x, m=None, dim=-1):
     return softmax
 
 
-def get_optimizer(optimizer_type, optimizer_lr, params):
-    # optimizer
-    optimizer_param = filter(lambda p: p.requires_grad, params)
-
-    if optimizer_type == 'adamax':
-        optimizer = optim.Adamax(optimizer_param,
-                                 lr=optimizer_lr)
-    elif optimizer_type == 'adam':
-        optimizer = optim.Adam(optimizer_param,
-                               lr=optimizer_lr)
-    elif optimizer_type == 'sgd':
-        optimizer = optim.SGD(optimizer_param,
-                              lr=optimizer_lr)
-    else:
-        raise ValueError('optimizer "%s" in config file not recoginized' % optimizer_type)
-
-    return optimizer
-
-
 def load_model_parameters(model, weight_path, enable_cuda=False, strict=False):
     weight = torch.load(weight_path, map_location=lambda storage, loc: storage)
     if enable_cuda:

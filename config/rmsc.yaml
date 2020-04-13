@@ -39,7 +39,10 @@ train:
   eval_steps: 100
   save_steps: 1000
 
-  batch_size: 32
-  optimizer: adamax   # adam, sgd, adamax
+  batch_size: 64
+  optimizer: adam   # adam, sgd, adamax
   learning_rate: 0.001
   clip_grad_norm: 5
+
+  learning_rate_decay: 0.5
+  start_decay_at: 2
