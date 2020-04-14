@@ -2,6 +2,7 @@
 
 dataset:
   h5_path: data/rmsc.h5
+#  data_path: data/rmsc-non-hier/rmsc.pickle
   data_path: data/rmsc.pickle
   meta_data_path: data/rmsc.pickle.meta
   doc_rep_path: data/rmsc_doc_qt_rep.pt
@@ -13,10 +14,10 @@ global:
   max_sent_length: 20
   max_sent_num: 40
   max_doc_length: 500
-  cand_doc_size: 4
+  cand_doc_size: 3
 
 model:
-  name: HLWAN_QT      # BiGRU, LW_BiGRU, HAN, HANLG, HLWAN, HLWAN_QT
+  name: HLWAN_QT_FT    # CNN, BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT, HLWAN_QT_FT
   hierarchical: True  # same as the model
 
   use_pretrain: True
@@ -25,25 +26,27 @@ model:
   embedding_path: data/rmsc_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
+  cell: GRU
+  num_layers: 1
   hidden_size: 100
   label_size: 22    # different with dataset
   dropout_p: 0.2
   layer_norm: true
 
 train:
-  num_epochs: 30
-  train_iters: 20000
+  num_epochs: 20
+  train_iters: 10000
   valid_iters: 50
   test_iters: 1000
 
   eval_steps: 100
   save_steps: 1000
 
-  batch_size: 64
+  batch_size: 128
   optimizer: adam   # adam, sgd, adamax
   learning_rate: 0.001
-  clip_grad_norm: 5
+  clip_grad_norm: 10
 
-  learning_rate_decay: 0.5
+  learning_rate_decay: 0.9
   start_decay_at: 2
   decay_steps: 1000

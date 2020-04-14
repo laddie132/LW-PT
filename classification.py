@@ -103,9 +103,12 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
 
 
 def print_metrics(metrics, stage='test'):
-    out = "{stage}_macro_f1={macro_f1:.2%}, {stage}_micro_f1={micro_f1:.2%}, " \
-          "{stage}_micro_p={micro_p:.2%}, {stage}_micro_r={micro_r:.2%}, " \
-          "{stage}_hamming_loss={hl:.4f}, {stage}_one_error={oe:.2%}" \
+    out = "\n{stage}_macro_f1={macro_f1:.2%}," \
+          "\n{stage}_micro_f1={micro_f1:.2%}," \
+          "\n{stage}_micro_p={micro_p:.2%}," \
+          "\n{stage}_micro_r={micro_r:.2%}," \
+          "\n{stage}_hamming_loss={hl:.4f}," \
+          "\n{stage}_one_error={oe:.2%}" \
         .format(stage=stage, macro_f1=metrics['macro_f1'], micro_f1=metrics['micro_f1'],
                 micro_p=metrics['micro_p'], micro_r=metrics['micro_r'],
                 hl=metrics['hamming_loss'], oe=metrics['one_error'])

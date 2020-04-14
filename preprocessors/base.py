@@ -44,6 +44,8 @@ class BaseDataset:
         self.train_emb(total_docs, total_labels)
 
         data, meta_data = self.transform()
+        # data, meta_data = self.transform_non_hier()
+        # data, meta_data = self.transform_emb_ave()
         meta_data['labels'] = self.sorted_labels
         self.save(data, meta_data)
         # self.save_h5(data, meta_data)

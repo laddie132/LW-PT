@@ -16,7 +16,7 @@ global:
   cand_doc_size: 4
 
 model:
-  name: LW_BiGRU_QT      # BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT
+  name: LW_BiGRU_QT      # CNN, BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT
   hierarchical: False  # same as the model
 
   use_pretrain: True
@@ -25,13 +25,15 @@ model:
   embedding_path: data/aapd_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
+  cell: GRU
+  num_layers: 1
   hidden_size: 256
   label_size: 54    # different with dataset
-  dropout_p: 0.1
+  dropout_p: 0.2
   layer_norm: true
 
 train:
-  num_epochs: 10
+  num_epochs: 20
   train_iters: 20000
   valid_iters: 50
   test_iters: 1000
@@ -39,11 +41,11 @@ train:
   eval_steps: 100
   save_steps: 1000
 
-  batch_size: 64
+  batch_size: 128
   optimizer: adam   # adam, sgd, adamax
   learning_rate: 0.001
-  clip_grad_norm: 5
+  clip_grad_norm: 10
 
-  learning_rate_decay: 0.5
+  learning_rate_decay: 0.9
   start_decay_at: 2
   decay_steps: 1000

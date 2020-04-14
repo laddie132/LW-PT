@@ -139,6 +139,9 @@ class HLWAN_QT(torch.nn.Module):
         input_size = hidden_size * 4 * label_size
         self.decoder = decoder.LinearMLC(input_size, label_size)
 
+        # input_size = hidden_size * 4
+        # self.decoder = decoder.LabelWiseGraphMLC(input_size, label_size)
+
     def forward(self, doc, *args):
         doc_emb = self.embedding_layer(doc)
         with torch.no_grad():
@@ -149,3 +152,44 @@ class HLWAN_QT(torch.nn.Module):
             doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
 
         return self.decoder(doc_rep)
+
+
+class HLWAN_QT_FT(torch.nn.Module):
+    def __init__(self, model_config):
+        super(HLWAN_QT_FT, self).__init__()
+        hidden_size = model_config['hidden_size']
+        label_size = model_config['label_size']
+        self.embedding_layer = get_embedding_layer(model_config)
+        self.tar_doc_encoder = encoder.HLWANEncoder(model_config)
+        self.cand_doc_encoder = encoder.HLWANEncoder(model_config)
+
+        input_size = hidden_size * 4 * label_size
+        self.decoder = decoder.LinearMLC(input_size, label_size)
+
+        # input_size = hidden_size * 4
+        # self.decoder = decoder.LabelWiseGraphMLC(input_size, label_size)
+
+    def forward(self, doc, *args):
+        doc_emb = self.embedding_layer(doc)
+        tar_doc_rep = self.tar_doc_encoder(doc_emb, *args)[0]
+        cand_doc_rep = self.cand_doc_encoder(doc_emb, *args)[0]
+
+        # doc representation: (batch, label_size, hidden_size * 4)
+        doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
+
+        return self.decoder(doc_rep)
+
+
+class CNN(torch.nn.Module):
+    def __init__(self, model_config):
+        super(CNN, self).__init__()
+        label_size = model_config['label_size']
+        self.embedding_layer = get_embedding_layer(model_config)
+        self.encoder = encoder.CNNEncoder(model_config)
+
+        input_size = 300
+        self.decoder = decoder.LinearMLC(input_size, label_size)
+
+    def forward(self, doc, *args):
+        doc_emb = self.embedding_layer(doc)
+        return self.decoder(self.encoder(doc_emb, *args)[0])

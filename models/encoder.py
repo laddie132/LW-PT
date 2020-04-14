@@ -25,15 +25,17 @@ class LWBiGRUEncoder(torch.nn.Module):
         label_size = model_config['label_size']
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
+        cell = model_config['cell']
+        num_layers = model_config['num_layers']
 
-        self.doc_rnn = MyRNNBase(mode='GRU',
+        self.doc_rnn = MyRNNBase(mode=cell,
                                  input_size=embedding_dim,
                                  hidden_size=hidden_size,
                                  bidirectional=True,
                                  dropout_p=dropout_p,
                                  enable_layer_norm=enable_layer_norm,
                                  batch_first=True,
-                                 num_layers=1)
+                                 num_layers=num_layers)
         self.doc_attention = MultiHeadSelfAttention(in_features=hidden_size * 2,
                                                     labels=label_size)
 
@@ -69,26 +71,28 @@ class HLWANEncoder(torch.nn.Module):
         label_size = model_config['label_size']
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
+        cell = model_config['cell']
+        num_layers = model_config['num_layers']
 
-        self.doc_word_rnn = MyRNNBase(mode='GRU',
+        self.doc_word_rnn = MyRNNBase(mode=cell,
                                       input_size=embedding_dim,
                                       hidden_size=hidden_size,
                                       bidirectional=True,
                                       dropout_p=dropout_p,
                                       enable_layer_norm=enable_layer_norm,
                                       batch_first=True,
-                                      num_layers=1)
+                                      num_layers=num_layers)
         self.doc_word_attention = MultiHeadSelfAttention(in_features=hidden_size * 2,
                                                          labels=label_size)
 
-        self.doc_sentence_rnn = MyRNNBase(mode='GRU',
+        self.doc_sentence_rnn = MyRNNBase(mode=cell,
                                           input_size=hidden_size * 2,
                                           hidden_size=hidden_size,
                                           bidirectional=True,
                                           dropout_p=dropout_p,
                                           enable_layer_norm=enable_layer_norm,
                                           batch_first=True,
-                                          num_layers=1)
+                                          num_layers=num_layers)
         self.doc_sentence_attention = MultiHeadSelfAttention(in_features=hidden_size * 2,
                                                              labels=label_size)
 
@@ -165,22 +169,24 @@ class BiGRUEncoder(torch.nn.Module):
         hidden_size = model_config['hidden_size']
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
+        cell = model_config['cell']
+        num_layers = model_config['num_layers']
 
-        self.doc_rnn = MyRNNBase(mode='GRU',
+        self.doc_rnn = MyRNNBase(mode=cell,
                                  input_size=embedding_dim,
                                  hidden_size=hidden_size,
                                  bidirectional=True,
                                  dropout_p=dropout_p,
                                  enable_layer_norm=enable_layer_norm,
                                  batch_first=True,
-                                 num_layers=1)
+                                 num_layers=num_layers)
         self.doc_attention = SelfAttention(in_features=hidden_size * 2)
 
     def forward(self, doc_emb, doc_mask):
         visual_parm = {}
 
         # (batch, doc_len, hidden_size * 2)
-        doc_rep, _ = self.doc_word_rnn(doc_emb, doc_mask)
+        doc_rep, _ = self.doc_rnn(doc_emb, doc_mask)
 
         # (batch, hidden_size * 2)
         doc_rep, doc_word_att_p = self.doc_attention(doc_rep, doc_mask)
@@ -206,25 +212,27 @@ class HANEncoder(torch.nn.Module):
         hidden_size = model_config['hidden_size']
         dropout_p = model_config['dropout_p']
         enable_layer_norm = model_config['layer_norm']
+        cell = model_config['cell']
+        num_layers = model_config['num_layers']
 
-        self.doc_word_rnn = MyRNNBase(mode='GRU',
+        self.doc_word_rnn = MyRNNBase(mode=cell,
                                       input_size=embedding_dim,
                                       hidden_size=hidden_size,
                                       bidirectional=True,
                                       dropout_p=dropout_p,
                                       enable_layer_norm=enable_layer_norm,
                                       batch_first=True,
-                                      num_layers=1)
+                                      num_layers=num_layers)
         self.doc_word_attention = SelfAttention(in_features=hidden_size * 2)
 
-        self.doc_sentence_rnn = MyRNNBase(mode='GRU',
+        self.doc_sentence_rnn = MyRNNBase(mode=cell,
                                           input_size=hidden_size * 2,
                                           hidden_size=hidden_size,
                                           bidirectional=True,
                                           dropout_p=dropout_p,
                                           enable_layer_norm=enable_layer_norm,
                                           batch_first=True,
-                                          num_layers=1)
+                                          num_layers=num_layers)
         self.doc_sentence_attention = SelfAttention(in_features=hidden_size * 2)
 
     def forward(self, doc_emb, doc_mask):
@@ -253,3 +261,41 @@ class HANEncoder(torch.nn.Module):
         visual_parm['doc_sent_att_p'] = doc_sent_att_p
 
         return doc_rep, visual_parm
+
+
+class CNNEncoder(torch.nn.Module):
+
+    def __init__(self, model_config):
+        super(CNNEncoder, self).__init__()
+        embedding_dim = model_config['embedding_dim']
+        dropout_p = model_config['dropout_p']
+        Co = 100
+        Ks = [3, 4, 5]
+
+        self.convs1 = torch.nn.ModuleList([torch.nn.Conv2d(1, Co, (K, embedding_dim)) for K in Ks])
+        '''
+        self.conv13 = nn.Conv2d(Ci, Co, (3, D))
+        self.conv14 = nn.Conv2d(Ci, Co, (4, D))
+        self.conv15 = nn.Conv2d(Ci, Co, (5, D))
+        '''
+        self.dropout = torch.nn.Dropout(dropout_p)
+
+    def conv_and_pool(self, x, conv):
+        x = F.relu(conv(x)).squeeze(3)  # (N, Co, W)
+        x = F.max_pool1d(x, x.size(2)).squeeze(2)
+        return x
+
+    def forward(self, x, *args):
+        x = x.unsqueeze(1)  # (N, Ci, W, D)
+        x = [F.relu(conv(x)).squeeze(3) for conv in self.convs1]  # [(N, Co, W), ...]*len(Ks)
+        x = [F.max_pool1d(i, i.size(2)).squeeze(2) for i in x]  # [(N, Co), ...]*len(Ks)
+        x = torch.cat(x, 1)
+
+        '''
+        x1 = self.conv_and_pool(x,self.conv13) #(N,Co)
+        x2 = self.conv_and_pool(x,self.conv14) #(N,Co)
+        x3 = self.conv_and_pool(x,self.conv15) #(N,Co)
+        x = torch.cat((x1, x2, x3), 1) # (N,len(Ks)*Co)
+        '''
+        x = self.dropout(x)  # (N, len(Ks)*Co)
+        return x, None

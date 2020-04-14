@@ -9,3 +9,4 @@ h5py>=2.9.0
 tqdm>=4.31.1
 nltk>=3.4.5
 jieba>=0.42.1
+scikit-multilearn>=0.2.0

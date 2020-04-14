@@ -11,6 +11,7 @@ import jieba
 import logging
 import numpy as np
 from tqdm import tqdm
+from functools import reduce
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 from .base import BaseDataset
@@ -18,6 +19,7 @@ from .base import BaseDataset
 logger = logging.getLogger(__name__)
 
 
+# TODO: load songs from meta data
 class RMSC(BaseDataset):
     """
     RMSC dataset
@@ -34,6 +36,7 @@ class RMSC(BaseDataset):
                                    random_seed=random_seed)
         self.max_sent = 40
         self.max_word = 20
+        self.max_doc_length = 500
 
         self.data_path = 'data/rmsc/small' if data_path is '' else data_path
         self.songs = os.listdir(self.data_path)
@@ -175,6 +178,107 @@ class RMSC(BaseDataset):
 
         logger.info("average comment length: {}".format(ave_sent_length))
         self.attrs['ave_sent_length'] = ave_sent_length
+        labels = MultiLabelBinarizer().fit_transform(labels_origin)
+        del labels_origin
+
+        # split the data
+        x_train, x_test_valid, y_train, y_test_valid, songs_train, songs_test_valid = \
+            train_test_split(comment, labels, self.songs, test_size=0.3,
+                             random_state=self.random_seed)
+        del comment
+        x_test, x_valid, y_test, y_valid, songs_test, songs_valid = train_test_split(
+            x_test_valid, y_test_valid, songs_test_valid, test_size=0.3, random_state=self.random_seed)
+        logger.info('train: {}'.format(len(songs_train)))
+        self.attrs['train_size'] = len(songs_train)
+        logger.info('valid: {}'.format(len(songs_valid)))
+        self.attrs['valid_size'] = len(songs_valid)
+        logger.info('test: {}'.format(len(songs_test)))
+        self.attrs['test_size'] = len(songs_test)
+
+        data = {'x_train': x_train,
+                'x_valid': x_valid,
+                'x_test': x_test,
+                'y_train': y_train,
+                'y_valid': y_valid,
+                'y_test': y_test}
+        meta_data = {'songs_train': songs_train,
+                     'songs_valid': songs_valid,
+                     'songs_test': songs_test}
+        return data, meta_data
+
+    def transform_non_hier(self):
+        labels_origin = []
+        len_songs = len(self.total_song_comments_and_tags)
+        comment = np.zeros((len_songs,
+                            self.max_doc_length), dtype=np.long)
+
+        # get input and label with embeddings
+        sum_comment_count = 0
+        for i in tqdm(range(len_songs), desc='transforming...'):
+            all_comments_in_every_song = self.total_song_comments_and_tags[i]["comments"]
+            all_comments_in_every_song = list(reduce(lambda x, y: x + y, all_comments_in_every_song))
+            ele = np.array(list(map(self.word_index, all_comments_in_every_song)), dtype=np.long)
+
+            count_cur_comment = len(ele)
+            sum_comment_count += count_cur_comment
+
+            if count_cur_comment < self.max_doc_length:
+                comment[i][0:count_cur_comment] = ele
+            else:
+                comment[i] = ele[0:self.max_doc_length]
+
+            every_song_comment_tags_embedding = np.array(
+                list(map(self.label_index, self.total_song_comments_and_tags[i]["tags"])))
+            labels_origin.append(every_song_comment_tags_embedding)
+        del self.total_song_comments_and_tags
+        ave_sent_length = sum_comment_count / len_songs
+
+        logger.info("average comment length: {}".format(ave_sent_length))
+        self.attrs['ave_sent_length'] = ave_sent_length
+        labels = MultiLabelBinarizer().fit_transform(labels_origin)
+        del labels_origin
+
+        # split the data
+        x_train, x_test_valid, y_train, y_test_valid, songs_train, songs_test_valid = \
+            train_test_split(comment, labels, self.songs, test_size=0.3,
+                             random_state=self.random_seed)
+        del comment
+        x_test, x_valid, y_test, y_valid, songs_test, songs_valid = train_test_split(
+            x_test_valid, y_test_valid, songs_test_valid, test_size=0.3, random_state=self.random_seed)
+        logger.info('train: {}'.format(len(songs_train)))
+        self.attrs['train_size'] = len(songs_train)
+        logger.info('valid: {}'.format(len(songs_valid)))
+        self.attrs['valid_size'] = len(songs_valid)
+        logger.info('test: {}'.format(len(songs_test)))
+        self.attrs['test_size'] = len(songs_test)
+
+        data = {'x_train': x_train,
+                'x_valid': x_valid,
+                'x_test': x_test,
+                'y_train': y_train,
+                'y_valid': y_valid,
+                'y_test': y_test}
+        meta_data = {'songs_train': songs_train,
+                     'songs_valid': songs_valid,
+                     'songs_test': songs_test}
+        return data, meta_data
+
+    def transform_emb_ave(self):
+        labels_origin = []
+        len_songs = len(self.total_song_comments_and_tags)
+        comment = np.zeros((len_songs, self.emb_dim), dtype=np.float)
+
+        # get input and label with embeddings
+        for i in tqdm(range(len_songs), desc='transforming...'):
+            all_comments_in_every_song = self.total_song_comments_and_tags[i]["comments"]
+            all_comments_in_every_song = list(reduce(lambda x, y: x + y, all_comments_in_every_song))
+            ele = np.array(list(map(self.word_emb, all_comments_in_every_song)), dtype=np.float)
+            comment[i] = ele.mean(axis=0)
+
+            every_song_comment_tags_embedding = np.array(
+                list(map(self.label_index, self.total_song_comments_and_tags[i]["tags"])))
+            labels_origin.append(every_song_comment_tags_embedding)
+        del self.total_song_comments_and_tags
         labels = MultiLabelBinarizer().fit_transform(labels_origin)
         del labels_origin
 
