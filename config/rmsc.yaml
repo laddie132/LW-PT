@@ -14,7 +14,7 @@ global:
   max_sent_length: 20
   max_sent_num: 40
   max_doc_length: 500
-  cand_doc_size: 5
+  cand_doc_size: 3
 
 model:
   name: LWQT    # CNN, RNN, LWAN, LWQT
