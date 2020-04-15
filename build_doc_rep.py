@@ -69,10 +69,10 @@ def test_on_model(model, dataloader, device):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='config/config.yaml', help='config path')
-    parser.add_argument('--in', dest='in_infix', type=str, default='default', help='input path infix')
-    parser.add_argument('--out', type=str, default='default', help='output path infix')
-    parser.add_argument('--gpuid', type=int, default=None, help='gpuid')
+    parser.add_argument('-config', type=str, default='config.yaml', help='config path')
+    parser.add_argument('-in', dest='in_infix', type=str, default='default', help='input path infix')
+    parser.add_argument('-out', type=str, default='default', help='output path infix')
+    parser.add_argument('-gpuid', type=int, default=None, help='gpuid')
     args = parser.parse_args()
 
     init_logging(out_infix=args.out)

@@ -21,9 +21,10 @@ class RCV1V2(BaseDataset):
 
     def __init__(self, data_path, random_seed):
         super(RCV1V2, self).__init__(h5_path='data/rcv1v2.h5',
-                                     save_data_path='data/rcv1v2.pickle',
-                                     save_meta_data_path='data/rcv1v2.pickle.meta',
-                                     save_w2v_path='data/rcv1v2_word2vec.model',
+                                     save_data_path='data/rcv1v2.pkl',
+                                     save_meta_data_path='data/rcv1v2.pkl.meta',
+                                     w2v_path='data/rcv1v2_word2vec.model',
+                                     load_emb=False,
                                      emb_dim=256,
                                      max_vocab_size=None,
                                      random_seed=random_seed)

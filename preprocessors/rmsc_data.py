@@ -19,7 +19,7 @@ from .base import BaseDataset
 logger = logging.getLogger(__name__)
 
 
-# TODO: load songs from meta data
+# TODO: load songs from json data
 class RMSC(BaseDataset):
     """
     RMSC dataset
@@ -28,9 +28,10 @@ class RMSC(BaseDataset):
 
     def __init__(self, data_path, random_seed):
         super(RMSC, self).__init__(h5_path='data/rmsc.h5',
-                                   save_data_path='data/rmsc.pickle',
-                                   save_meta_data_path='data/rmsc.pickle.meta',
-                                   save_w2v_path='data/rmsc_word2vec.model',
+                                   save_data_path='data/rmsc.pkl',
+                                   save_meta_data_path='data/rmsc.pkl.meta',
+                                   w2v_path='data/rmsc_word2vec.model',
+                                   load_emb=False,
                                    emb_dim=100,
                                    max_vocab_size=None,
                                    random_seed=random_seed)

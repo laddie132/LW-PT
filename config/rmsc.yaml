@@ -2,10 +2,10 @@
 
 dataset:
   h5_path: data/rmsc.h5
-#  data_path: data/rmsc-non-hier/rmsc.pickle
-  data_path: data/rmsc.pickle
-  meta_data_path: data/rmsc.pickle.meta
-  doc_rep_path: data/rmsc_doc_qt_rep.pt
+#  data_path: data/rmsc_non_hier.pkl
+  data_path: data/rmsc.pkl
+  meta_data_path: data/rmsc.pkl.meta
+  doc_rep_path: data/rmsc_qt_rep.pt-cand3
 
 global:
   random_seed: 123
@@ -14,11 +14,13 @@ global:
   max_sent_length: 20
   max_sent_num: 40
   max_doc_length: 500
-  cand_doc_size: 3
+  cand_doc_size: 5
 
 model:
-  name: HLWAN_QT_FT    # CNN, BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT, HLWAN_QT_FT
-  hierarchical: True  # same as the model
+  name: LWQT    # CNN, RNN, LWAN, LWQT
+  decoder: MLP  # MLP, LW, LG, LWLG
+  hierarchical: True  # same as dataset
+  fine_tune: False
 
   use_pretrain: True
   embedding_num: 50000
@@ -35,7 +37,7 @@ model:
 
 train:
   num_epochs: 20
-  train_iters: 10000
+  train_iters: 5000
   valid_iters: 50
   test_iters: 1000
 

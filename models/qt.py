@@ -50,9 +50,15 @@ class DocRepQTTrainModel(torch.nn.Module):
         if hierarchical:
             self.tar_doc_encoder = encoder.HLWANEncoder(model_config)
             self.cand_doc_encoder = encoder.HLWANEncoder(model_config)
+
+            # self.tar_doc_encoder = encoder.HANEncoder(model_config)
+            # self.cand_doc_encoder = encoder.HANEncoder(model_config)
         else:
-            self.tar_doc_encoder = encoder.LWBiGRUEncoder(model_config)
-            self.cand_doc_encoder = encoder.LWBiGRUEncoder(model_config)
+            self.tar_doc_encoder = encoder.LWBiRNNEncoder(model_config)
+            self.cand_doc_encoder = encoder.LWBiRNNEncoder(model_config)
+
+            # self.tar_doc_encoder = encoder.BiRNNEncoder(model_config)
+            # self.cand_doc_encoder = encoder.BiRNNEncoder(model_config)
 
     def forward(self, tar_d, tar_mask, cand_ds, cand_mask, label):
         # embedding layer
@@ -103,8 +109,8 @@ class DocRepQTTestModel(torch.nn.Module):
             self.tar_doc_encoder = encoder.HLWANEncoder(model_config)
             self.cand_doc_encoder = encoder.HLWANEncoder(model_config)
         else:
-            self.tar_doc_encoder = encoder.LWBiGRUEncoder(model_config)
-            self.cand_doc_encoder = encoder.LWBiGRUEncoder(model_config)
+            self.tar_doc_encoder = encoder.LWBiRNNEncoder(model_config)
+            self.cand_doc_encoder = encoder.LWBiRNNEncoder(model_config)
 
     def forward(self, doc, doc_mask):
         # embedding layer

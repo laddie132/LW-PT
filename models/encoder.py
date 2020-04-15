@@ -7,9 +7,9 @@ __email__ = "liuhan132@foxmail.com"
 from .layers import *
 
 
-class LWBiGRUEncoder(torch.nn.Module):
+class LWBiRNNEncoder(torch.nn.Module):
     """
-    Label-Wise Bidirectional GRU encoder on word-level for document representation
+    Label-Wise Bidirectional RNN encoder on word-level for document representation
     Inputs:
         doc_emb: (batch, doc_len, emb_dim)
         doc_mask: (batch, doc_len)
@@ -18,7 +18,7 @@ class LWBiGRUEncoder(torch.nn.Module):
         doc_rep: (batch, hidden_size * 2) / (batch, label_size, hidden_size * 2)
     """
     def __init__(self, model_config):
-        super(LWBiGRUEncoder, self).__init__()
+        super(LWBiRNNEncoder, self).__init__()
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']
@@ -152,9 +152,9 @@ class HLWANEncoder(torch.nn.Module):
         return doc_rep, visual_parm
 
 
-class BiGRUEncoder(torch.nn.Module):
+class BiRNNEncoder(torch.nn.Module):
     """
-    Bidirectional GRU encoder on word-level for document representation
+    Bidirectional RNN encoder on word-level for document representation
     Inputs:
         doc_emb: (batch, doc_len, emb_dim)
         doc_mask: (batch, doc_len)
@@ -163,7 +163,7 @@ class BiGRUEncoder(torch.nn.Module):
         doc_rep: (batch, hidden_size * 2)
     """
     def __init__(self, model_config):
-        super(BiGRUEncoder, self).__init__()
+        super(BiRNNEncoder, self).__init__()
 
         embedding_dim = model_config['embedding_dim']
         hidden_size = model_config['hidden_size']
@@ -182,7 +182,7 @@ class BiGRUEncoder(torch.nn.Module):
                                  num_layers=num_layers)
         self.doc_attention = SelfAttention(in_features=hidden_size * 2)
 
-    def forward(self, doc_emb, doc_mask):
+    def forward(self, doc_emb, doc_mask, label=None):
         visual_parm = {}
 
         # (batch, doc_len, hidden_size * 2)
@@ -235,7 +235,7 @@ class HANEncoder(torch.nn.Module):
                                           num_layers=num_layers)
         self.doc_sentence_attention = SelfAttention(in_features=hidden_size * 2)
 
-    def forward(self, doc_emb, doc_mask):
+    def forward(self, doc_emb, doc_mask, label=None):
         visual_parm = {}
         batch, doc_sent_len, doc_word_len, _ = doc_emb.size()
 

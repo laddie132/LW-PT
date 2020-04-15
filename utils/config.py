@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def init_env(config_path, in_infix, out_infix, writer_suffix, gpuid=None):
+    config_path = os.path.join('config', config_path)
     logger.info('loading config file: {}'.format(config_path))
     logger.info('in_infix: {}'.format(in_infix))
     logger.info('out_infix: {}'.format(out_infix))

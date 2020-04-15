@@ -25,8 +25,8 @@ def run(data_name, data_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data', type=str, default='', help='dataset name')
-    parser.add_argument('--path', type=str, default='', help='dataset path')
+    parser.add_argument('-data', type=str, default='', help='dataset name')
+    parser.add_argument('-path', type=str, default='', help='dataset path')
     args = parser.parse_args()
 
     init_logging()

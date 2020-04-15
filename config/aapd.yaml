@@ -2,9 +2,9 @@
 
 dataset:
   h5_path: data/aapd.h5
-  data_path: data/aapd.pickle
-  meta_data_path: data/aapd.pickle.meta
-  doc_rep_path: data/aapd_doc_qt_rep.pt
+  data_path: data/aapd.pkl
+  meta_data_path: data/aapd.pkl.meta
+  doc_rep_path: data/aapd_qt_rep.pt
 
 global:
   random_seed: 123
@@ -13,11 +13,13 @@ global:
   max_sent_length: 20
   max_sent_num: 40
   max_doc_length: 500
-  cand_doc_size: 4
+  cand_doc_size: 3
 
 model:
-  name: LW_BiGRU_QT      # CNN, BiGRU, LW_BiGRU, LW_BiGRU_QT, HAN, HANLG, HLWAN, HLWAN_QT
-  hierarchical: False  # same as the model
+  name: LWQT    # CNN, RNN, LWAN, LWQT
+  decoder: MLP  # MLP, LW, LG, LWLG
+  hierarchical: False  # same as dataset
+  fine_tune: False
 
   use_pretrain: True
   embedding_num: 50000

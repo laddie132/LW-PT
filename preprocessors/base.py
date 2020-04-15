@@ -16,17 +16,18 @@ logger = logging.getLogger(__name__)
 class BaseDataset:
     _compress_option = dict(compression="gzip", compression_opts=9, shuffle=False)
 
-    def __init__(self, h5_path, save_data_path, save_meta_data_path, save_w2v_path,
-                 emb_dim, max_vocab_size, random_seed):
+    def __init__(self, h5_path, save_data_path, save_meta_data_path, w2v_path,
+                 load_emb, emb_dim, max_vocab_size, random_seed):
         self.random_seed = random_seed
         self.emb_dim = emb_dim
+        self.load_emb = load_emb
         self.max_vocab_size = max_vocab_size
 
         # path
         self.h5_path = h5_path
         self.save_data_path = save_data_path
         self.save_meta_data_path = save_meta_data_path
-        self.save_w2v_path = save_w2v_path
+        self.w2v_path = w2v_path
 
         # data
         self.word2vec = None
@@ -57,14 +58,17 @@ class BaseDataset:
         return NotImplementedError
 
     def train_emb(self, total_docs, total_labels):
-        logger.info('training word2vec...')
-        self.word2vec = Word2Vec(total_docs, size=self.emb_dim, max_vocab_size=self.max_vocab_size,
-                                 workers=1, min_count=1, seed=self.random_seed)
-        # self.word2vec = Word2Vec.load('data/rmsc_word2vec.model')     # load pre-trained embeddings
-        self.word2vec.save(self.save_w2v_path, sep_limit=0, separately=['vectors'],
-                           ignore=['vectors_lockf', 'syn1neg', 'cum_table'])
-        self.word2vec.wv.save_word2vec_format(self.save_w2v_path + '.txt')
-        logger.info("word2vec info: {}".format(self.word2vec))
+        if self.load_emb:
+            logger.info('loading word2vec...')
+            self.word2vec = Word2Vec.load(self.w2v_path)  # load pre-trained embeddings
+        else:
+            logger.info('training word2vec...')
+            self.word2vec = Word2Vec(total_docs, size=self.emb_dim, max_vocab_size=self.max_vocab_size,
+                                     workers=1, min_count=1, seed=self.random_seed)
+            self.word2vec.save(self.w2v_path, sep_limit=0, separately=['vectors'],
+                               ignore=['vectors_lockf', 'syn1neg', 'cum_table'])
+            self.word2vec.wv.save_word2vec_format(self.w2v_path + '.txt')
+            logger.info("word2vec info: {}".format(self.word2vec))
 
         # labels dictionary
         self.sorted_labels = sorted(list(total_labels))
