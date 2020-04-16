@@ -2,6 +2,7 @@
 
 dataset:
   h5_path: data/aapd.h5
+#  data_path: data/aapd_hier.pkl
   data_path: data/aapd.pkl
   meta_data_path: data/aapd.pkl.meta
   doc_rep_path: data/aapd_qt_rep.pt
@@ -10,16 +11,16 @@ global:
   random_seed: 123
   num_data_workers: 16
 
-  max_sent_length: 20
-  max_sent_num: 40
+  max_sent_length: 50
+  max_sent_num: 15
   max_doc_length: 500
   cand_doc_size: 3
 
 model:
   name: LWQT    # CNN, RNN, LWAN, LWQT
-  decoder: MLP  # MLP, LW, LG, LWLG
+  decoder: LWLG  # MLP, LW, LG, LWLG
   hierarchical: False  # same as dataset
-  fine_tune: False
+  fine_tune: True
 
   use_pretrain: True
   embedding_num: 50000
@@ -27,8 +28,8 @@ model:
   embedding_path: data/aapd_word2vec.model.wv.vectors.npy
   embedding_freeze: True
 
-  cell: GRU
-  num_layers: 1
+  cell: LSTM
+  num_layers: 2
   hidden_size: 256
   label_size: 54    # different with dataset
   dropout_p: 0.2
@@ -36,7 +37,7 @@ model:
 
 train:
   num_epochs: 20
-  train_iters: 20000
+  train_iters: 5000
   valid_iters: 50
   test_iters: 1000
 

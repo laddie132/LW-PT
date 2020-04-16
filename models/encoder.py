@@ -116,7 +116,7 @@ class HLWANEncoder(torch.nn.Module):
         doc_sent_emb, doc_word_att_p = self.doc_word_attention(doc_word_rep, word_level_label, doc_word_mask)
         visual_parm['doc_word_att_p'] = doc_word_att_p
 
-        doc_sent_mask = compute_top_layer_mask(doc_mask)
+        doc_sent_mask = compute_top_layer_mask(doc_mask)    # TODO: mismatch for aapd hier
         if label is not None:
             # (batch, doc_sent_len, hidden_size * 2)
             doc_sent_emb = doc_sent_emb.view(batch, doc_sent_len, -1)

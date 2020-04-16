@@ -4,6 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
+import re
 import os
 import logging
 import nltk
@@ -15,21 +16,25 @@ from .base import BaseDataset
 logger = logging.getLogger(__name__)
 
 
-class AAPD(BaseDataset):
+class AAPD_Hier(BaseDataset):
     """
     AAPD dataset
     """
 
     def __init__(self, data_path, random_seed):
-        super(AAPD, self).__init__(h5_path='data/aapd.h5',
-                                   save_data_path='data/aapd.pkl',
-                                   save_meta_data_path='data/aapd.pkl.meta',
-                                   w2v_path='data/aapd_word2vec.model',
-                                   load_emb=False,
-                                   emb_dim=256,
-                                   max_vocab_size=None,
-                                   random_seed=random_seed)
+        super(AAPD_Hier, self).__init__(h5_path='data/aapd.h5',
+                                        save_data_path='data/aapd_hier.pkl',
+                                        save_meta_data_path='data/aapd_hier.pkl.meta',
+                                        w2v_path='data/aapd_word2vec.model',
+                                        load_emb=True,
+                                        emb_dim=256,
+                                        max_vocab_size=None,
+                                        random_seed=random_seed)
+        self.max_sent = 15
+        self.max_word = 50
         self.max_doc_length = 500
+
+        self.sent_num = 0
 
         self.data_path = 'data/aapd' if data_path is '' else data_path
         self.raw_texts_labels = {}
@@ -53,7 +58,7 @@ class AAPD(BaseDataset):
         total_texts = train_texts + val_texts + test_texts
         total_labels = train_labels.union(val_labels).union(test_labels)
 
-        data_size = len(total_texts)
+        data_size = len(train_text_labels) + len(val_text_labels) + len(test_text_labels)
         self.attrs['data_size'] = data_size
         self.attrs['train_size'] = len(train_text_labels)
         self.attrs['valid_size'] = len(val_text_labels)
@@ -68,10 +73,13 @@ class AAPD(BaseDataset):
 
         ave_text_len = (train_word_sum + val_word_sum + test_word_sum) * 1.0 / data_size
         ave_label_size = (train_label_sum + val_label_sum + test_label_sum) * 1.0 / data_size
+        ave_sent_len = self.sent_num * 1.0 / data_size
+        logger.info('Ave sent len: {}'.format(ave_sent_len))
         logger.info('Ave text len: {}'.format(ave_text_len))
         logger.info('Ave label size: {}'.format(ave_label_size))
         self.attrs['ave_text_len'] = ave_text_len
         self.attrs['ave_label_size'] = ave_label_size
+        self.attrs['ave_sent_len'] = ave_sent_len
 
         return total_texts, total_labels
 
@@ -85,16 +93,19 @@ class AAPD(BaseDataset):
         with open(text_path, 'r') as tf, open(label_path, 'r') as lf:
             for text, label in zip(tf, lf):
                 if text != '' and label != '':
-                    text = text.strip()
                     label = label.strip().split()
                     labels_sum += len(label)
 
-                    text_split = nltk.word_tokenize(text)
-                    all_texts.append(text_split)
-                    texts_word_sum += len(text_split)
+                    cur_sents = []
+                    for sent in re.split('[，,.。？?]', text.strip()):
+                        sent_split = nltk.word_tokenize(sent)
+                        cur_sents.append(sent_split)
+                        all_texts.append(sent_split)
+                        texts_word_sum += len(sent_split)
 
+                    self.sent_num += len(cur_sents)
                     all_labels.extend(label)
-                    texts_labels.append((text_split, label))
+                    texts_labels.append((cur_sents, label))
         all_labels = set(all_labels)
 
         return texts_labels, all_texts, all_labels, texts_word_sum, labels_sum
@@ -116,16 +127,22 @@ class AAPD(BaseDataset):
     def t5_data(self, data):
         labels_origin = []
         data_size = len(data)
-        texts_idx = np.zeros((data_size, self.max_doc_length), dtype=np.long)
+        texts_idx = np.zeros((data_size, self.max_sent, self.max_word), dtype=np.long)
 
         for i, example in tqdm(enumerate(data), total=data_size, desc='transforming...'):
-            exa_text_idx = np.array(list(map(self.word_index, example[0])), dtype=np.long)
-            cur_len = exa_text_idx.shape[0]
-            if cur_len > self.max_doc_length:
-                texts_idx[i] = exa_text_idx[:self.max_doc_length]
-            else:
-                texts_idx[i][:cur_len] = exa_text_idx
+            cur_text = np.zeros((self.max_sent, self.max_word), dtype=np.long)
+            for j, sent in enumerate(example[0]):
+                if j >= self.max_sent:
+                    break
 
+                sent_idx = np.array(list(map(self.word_index, sent)), dtype=np.long)
+                cur_len = sent_idx.shape[0]
+                if cur_len > self.max_word:
+                    cur_text[j] = sent_idx[:self.max_word]
+                else:
+                    cur_text[j][:cur_len] = sent_idx
+
+            texts_idx[i] = cur_text
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 

@@ -20,7 +20,7 @@ model:
   name: LWQT    # CNN, RNN, LWAN, LWQT
   decoder: MLP  # MLP, LW, LG, LWLG
   hierarchical: True  # same as dataset
-  fine_tune: False
+  fine_tune: True
 
   use_pretrain: True
   embedding_num: 50000
