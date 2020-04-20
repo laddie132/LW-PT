@@ -85,7 +85,8 @@ class DocRepQTTrainModel(torch.nn.Module):
         # output layer
         cand_scores = torch.bmm(tar_doc_rep.unsqueeze(1),
                                 cand_docs_rep.transpose(1, 2)).squeeze(1)  # (batch, cand_doc_num)
-        cand_logits = torch.log_softmax(cand_scores, dim=-1)
+        cand_prob = torch.softmax(cand_scores, dim=-1)
+        cand_logits = torch.log(cand_prob + 1e-8)     # to prevent Nan loss
 
         return cand_logits
 

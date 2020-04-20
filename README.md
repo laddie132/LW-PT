@@ -1,21 +1,21 @@
-# DA-QT
+# Label-Wised Quick-Thought (LW-QT)
 
 ## Preprocessing
 ``` bash
-PYTHONHASHSEED=1 python preprocess.py
+PYTHONHASHSEED=1 python preprocess.py -data=[DATA_NAME]
 ```
 
 ## Pre-Train
 ``` bash
-python pretrain.py --out=[OUT_INFIX]
+python pretrain.py -out=[OUT_INFIX] -train -test
 ```
 
 ## Build Doc-Rep
 ``` bash
-python build_doc_rep.py --in=[IN_INFIX]
+python build_doc_rep.py -in=[IN_INFIX]
 ```
 
 ## Train Classification
 ``` bash
-python classification.py --out=[OUT_INFIX]
+python classification.py -in=[IN_INFIX] -out=[OUT_INFIX] -train -test
 ```

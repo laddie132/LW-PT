@@ -32,8 +32,8 @@ class MultiLabelCls(BaseModule):
         :param reduction:
         :return:
         """
-        y_pred_log = torch.log(y_pred)
-        non_y_pred_log = torch.log(1 - y_pred)
+        y_pred_log = torch.log(y_pred + 1e-8)   # to prevent Nan loss
+        non_y_pred_log = torch.log(1 - y_pred + 1e-8)
         valid_docs_prob_log = y_pred_log * y_true.float()
         non_docs_prob_log = non_y_pred_log * (1 - y_true).float()
         batch_loss = -valid_docs_prob_log.sum(dim=-1) - non_docs_prob_log.sum(dim=-1)
