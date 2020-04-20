@@ -19,3 +19,8 @@ python build_doc_rep.py -in=[IN_INFIX]
 ``` bash
 python classification.py -in=[IN_INFIX] -out=[OUT_INFIX] -train -test
 ```
+
+## Others
+
+- make RMSC-V2 dataset: `tests/make_rmsc.py`
+- visual document embeddings: `tests/visual_emb.py`
