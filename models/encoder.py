@@ -131,6 +131,8 @@ class HLWANEncoder(torch.nn.Module):
 
         # (batch, doc_sent_len, hidden_size * 2) / (batch * label_size, doc_sent_len, hidden_size * 2)
         doc_sent_rep, _ = self.doc_sentence_rnn(doc_sent_emb, doc_sent_mask)
+        doc_sent_len = doc_sent_rep.shape[1]
+        doc_sent_mask = doc_sent_mask[:, :doc_sent_len]
 
         # (batch, hidden_size * 2) / (batch * label_size, label_size, hidden_size * 2)
         doc_rep, doc_sent_att_p = self.doc_sentence_attention(doc_sent_rep, label, doc_sent_mask)
@@ -255,6 +257,8 @@ class HANEncoder(torch.nn.Module):
 
         # (batch, doc_sent_len, hidden_size * 2)
         doc_sent_rep, _ = self.doc_sentence_rnn(doc_sent_emb, doc_sent_mask)
+        doc_sent_len = doc_sent_rep.shape[1]
+        doc_sent_mask = doc_sent_mask[:, :doc_sent_len]
 
         # (batch, hidden_size * 2)
         doc_rep, doc_sent_att_p = self.doc_sentence_attention(doc_sent_rep, doc_sent_mask)
