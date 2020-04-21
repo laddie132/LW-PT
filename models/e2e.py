@@ -74,6 +74,7 @@ class LWQT(torch.nn.Module):
         hierarchical = model_config['hierarchical']
         self.fine_tune = model_config['fine_tune']
         dec = model_config['decoder']
+        self.flag = False
 
         self.embedding_layer = get_embedding_layer(model_config)
         if hierarchical:
@@ -86,26 +87,41 @@ class LWQT(torch.nn.Module):
         self.decoder = get_decoder(dec, hidden_size, label_size, qt=True, lw=True)
 
     def forward(self, doc, *args):
+        self.flag = not self.flag
         doc_emb = self.embedding_layer(doc)
 
         if self.fine_tune:
             tar_doc_rep = self.tar_doc_encoder(doc_emb, *args)[0]
             cand_doc_rep = self.cand_doc_encoder(doc_emb, *args)[0]
+            # if self.flag:
+            #     tar_doc_rep = self.tar_doc_encoder(doc_emb, *args)[0]
+            #     with torch.no_grad():
+            #         cand_doc_rep = self.cand_doc_encoder(doc_emb, *args)[0]
+            # else:
+            #     with torch.no_grad():
+            #         tar_doc_rep = self.tar_doc_encoder(doc_emb, *args)[0]
+            #     cand_doc_rep = self.cand_doc_encoder(doc_emb, *args)[0]
         else:
+            # self.tar_doc_encoder.eval()
+            # self.cand_doc_encoder.eval()
             with torch.no_grad():
                 tar_doc_rep = self.tar_doc_encoder(doc_emb, *args)[0]
                 cand_doc_rep = self.cand_doc_encoder(doc_emb, *args)[0]
 
         # doc representation: (batch, label_size, hidden_size * 4)
         doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
+        # doc_rep = (tar_doc_rep + cand_doc_rep) / 2
         return self.decoder(doc_rep)
 
 
 def get_decoder(method, hidden_size, label_size, qt, lw):
     times = 4 if qt else 2
-    if method == 'MLP':
+    if method == 'Linear':
         input_size = hidden_size * times * label_size if lw else hidden_size * times
         return decoder.LinearMLC(input_size, label_size)
+    elif method == 'MLP':
+        input_size = hidden_size * times * label_size if lw else hidden_size * times
+        return decoder.TwoLinearMLC(input_size, hidden_size * 10, label_size)
     elif method == 'LW':
         input_size = hidden_size * times
         return decoder.LabelWiseMLC(input_size, label_size)

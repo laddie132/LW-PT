@@ -20,6 +20,20 @@ class LinearMLC(torch.nn.Module):
         return torch.sigmoid(self.cls_layer(doc_rep))
 
 
+class TwoLinearMLC(torch.nn.Module):
+    def __init__(self, input_size, hidden_size, label_size):
+        super(TwoLinearMLC, self).__init__()
+        self.hidden_layer = torch.nn.Linear(input_size, hidden_size)
+        self.cls_layer = torch.nn.Linear(hidden_size, label_size)
+
+    def forward(self, doc_rep):
+        batch = doc_rep.size(0)
+        # doc_rep = doc_rep.view(batch, label_size, -1, 2)[:, :, :, 1].contiguous()
+        doc_rep = doc_rep.view(batch, -1)
+        h = torch.relu(self.hidden_layer(doc_rep))
+        return torch.sigmoid(self.cls_layer(h))
+
+
 class LabelGraphMLC(torch.nn.Module):
     def __init__(self, input_size, label_size):
         super(LabelGraphMLC, self).__init__()
