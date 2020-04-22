@@ -6,6 +6,7 @@ __email__ = "liuhan132@foxmail.com"
 
 """Multi-Label Classification"""
 
+import json
 import argparse
 from tqdm import tqdm
 import torch
@@ -78,13 +79,16 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
                                         device=device)
             logger.info('epoch={}: '.format(epoch) + print_metrics(metrics, stage='valid'))
 
-            # save best model with maximum micro-f1
-            if best_metrics is None or metrics['micro_f1'] > best_metrics['micro_f1']:
+            # save best model with maximum micro-f1 and macro-f1
+            if best_metrics is None or metrics['micro_f1'] + metrics['macro_f1'] > \
+                    best_metrics['micro_f1'] + best_metrics['macro_f1']:
                 model.save_parameters(epoch)
 
                 best_metrics = metrics
                 best_epoch = epoch
         logging.info('best epoch={}: '.format(best_epoch) + print_metrics(best_metrics, stage='valid'))
+        with open('outputs/' + out_infix + '/valid_metrics.json', 'w') as wf:
+            json.dump(best_metrics, wf, indent=2)
 
     if is_test:
         logger.info('start testing...')
@@ -97,6 +101,8 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
                                     batch_data=test_data,
                                     device=device)
         logger.info(print_metrics(metrics, stage='test'))
+        with open('outputs/' + out_infix + '/metrics.json', 'w') as wf:
+            json.dump(metrics, wf, indent=2)
 
     writer.close()
     logger.info('finished.')
@@ -133,7 +139,7 @@ def train_on_model(epoch, model, criterion, optimizer, batch_data, device, write
         loss.backward()
 
         # evaluate
-        macro_f1, micro_f1, micro_p, micro_r = evaluate_f1_ml(predict, truth)
+        macro_f1, micro_f1, micro_p, micro_r, _ = evaluate_f1_ml(predict, truth)
         hamming_loss = evaluate_hamming_loss(predict, truth)
         one_error = evaluate_one_error(predict, truth)
 
@@ -170,7 +176,7 @@ def eval_on_model(model, batch_data, device):
 
     predict = torch.cat(all_predict, dim=0)
     truth = torch.cat(all_truth, dim=0)
-    macro_f1, micro_f1, micro_p, micro_r = evaluate_f1_ml(predict, truth)
+    macro_f1, micro_f1, micro_p, micro_r, label_f1 = evaluate_f1_ml(predict, truth)
     hamming_loss = evaluate_hamming_loss(predict, truth)
     one_error = evaluate_one_error(predict, truth)
 
@@ -179,7 +185,8 @@ def eval_on_model(model, batch_data, device):
                'micro_p': micro_p,
                'micro_r': micro_r,
                'hamming_loss': hamming_loss,
-               'one_error': one_error}
+               'one_error': one_error,
+               'label_f1': label_f1}
     return metrics
 
 

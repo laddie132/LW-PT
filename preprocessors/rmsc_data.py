@@ -22,7 +22,7 @@ class RMSC(BaseDataset):
     def __init__(self, data_path, random_seed):
         super(RMSC, self).__init__(h5_path='data/rmsc.h5',
                                    save_data_path='data/rmsc.pkl',
-                                   save_meta_data_path='data/rmsc.pkl.meta',
+                                   save_meta_data_path='data/rmsc.meta.json',
                                    w2v_path='data/rmsc_word2vec.model',
                                    load_emb=False,
                                    emb_dim=100,

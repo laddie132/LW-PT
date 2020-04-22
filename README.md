@@ -24,3 +24,4 @@ python classification.py -in=[IN_INFIX] -out=[OUT_INFIX] -train -test
 
 - make RMSC-V2 dataset: `tests/make_rmsc.py`
 - visual document embeddings: `tests/visual_emb.py`
+- visual labels F1 score: `tests/visual_label_f1.py`

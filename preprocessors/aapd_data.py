@@ -21,7 +21,7 @@ class AAPD(BaseDataset):
     def __init__(self, data_path, random_seed):
         super(AAPD, self).__init__(h5_path='data/aapd.h5',
                                    save_data_path='data/aapd.pkl',
-                                   save_meta_data_path='data/aapd.pkl.meta',
+                                   save_meta_data_path='data/aapd.meta.json',
                                    w2v_path='data/aapd_word2vec.model',
                                    load_emb=False,
                                    emb_dim=256,

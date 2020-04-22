@@ -4,6 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
+import json
 import h5py
 import pickle
 import logging
@@ -210,7 +211,7 @@ class BaseDataset:
 
         logger.info('saving meta-data...')
         with open(self.save_meta_data_path, 'wb') as f:
-            pickle.dump({**meta_data, **self.attrs}, f)
+            json.dump({**self.attrs, **meta_data}, f, indent=2)
 
     def save_h5(self, data, meta_data):
         logger.info('saving hdf5 data...')

@@ -18,7 +18,7 @@ global:
 
 model:
   name: LWQT    # CNN, RNN, LWAN, LWQT
-  decoder: Linear  # Linear, MLP, LW, LG, LWLG
+  decoder: MLP  # Linear, MLP, LW, LG, LWLG
   hierarchical: False  # same as dataset
   fine_tune: True
 
