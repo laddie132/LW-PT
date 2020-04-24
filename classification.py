@@ -35,7 +35,7 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
     logger.info('constructing model...')
     # model = MultiLabelCls(config).to(device)
     model = E2EMultiLabelCls(config).to(device)
-    model.load_parameters(enable_cuda)
+    model.load_parameters(enable_cuda)      # replace=('tar_doc_encoder', 'encoder')
 
     # loss function
     criterion = MultiLabelCls.criterion
@@ -69,14 +69,14 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
                            batch_data=train_data,
                            device=device,
                            writer=writer)
-            optimizer.updateLearningRate(epoch)     # learning rate decay
+            optimizer.updateLearningRate(epoch)  # learning rate decay
 
             # evaluate
             with torch.no_grad():
                 model.eval()  # let training = False, make sure right dropout
-                metrics = eval_on_model(model=model,
-                                        batch_data=valid_data,
-                                        device=device)
+                metrics, _ = eval_on_model(model=model,
+                                           batch_data=valid_data,
+                                           device=device)
             logger.info('epoch={}: '.format(epoch) + print_metrics(metrics, stage='valid'))
 
             # save best model with maximum micro-f1 and macro-f1
@@ -97,12 +97,13 @@ def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
 
         with torch.no_grad():
             model.eval()
-            metrics = eval_on_model(model=model,
-                                    batch_data=test_data,
-                                    device=device)
+            metrics, predict = eval_on_model(model=model,
+                                             batch_data=test_data,
+                                             device=device)
         logger.info(print_metrics(metrics, stage='test'))
         with open('outputs/' + out_infix + '/metrics.json', 'w') as wf:
             json.dump(metrics, wf, indent=2)
+        torch.save(predict, 'outputs/' + out_infix + '/predict.pt')
 
     writer.close()
     logger.info('finished.')
@@ -187,7 +188,7 @@ def eval_on_model(model, batch_data, device):
                'hamming_loss': hamming_loss,
                'one_error': one_error,
                'label_f1': label_f1}
-    return metrics
+    return metrics, predict
 
 
 if __name__ == '__main__':

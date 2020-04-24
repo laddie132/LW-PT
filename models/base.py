@@ -26,7 +26,7 @@ class BaseModule(torch.nn.Module):
         out = self.model(*args)
         return out
 
-    def load_parameters(self, enable_cuda, force=False, strict=False):
+    def load_parameters(self, enable_cuda, force=False, strict=False, replace=()):
         if force:
             assert os.path.exists(self.in_checkpoint_path)
 
@@ -36,7 +36,8 @@ class BaseModule(torch.nn.Module):
                                                           self.in_weight_path,
                                                           self.in_checkpoint_path,
                                                           enable_cuda,
-                                                          strict)
+                                                          strict,
+                                                          replace)
             logger.info('loaded {} module from {}'.format(self.model.__class__.__name__, load_weight_path))
 
     def load_out_parameters(self, enable_cuda, force=False, strict=False):

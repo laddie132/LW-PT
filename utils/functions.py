@@ -10,6 +10,7 @@ import random
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from collections import OrderedDict
 import torch.optim as optim
 import torch.cuda
 
@@ -237,20 +238,25 @@ def masked_softmax(x, m=None, dim=-1):
     return softmax
 
 
-def load_model_parameters(model, weight_path, enable_cuda=False, strict=False):
+def load_model_parameters(model, weight_path, enable_cuda=False, strict=False, replace=()):
     weight = torch.load(weight_path, map_location=lambda storage, loc: storage)
     if enable_cuda:
         weight = torch.load(weight_path, map_location=lambda storage, loc: storage.cuda())
+
+    if len(replace) == 2:
+        cur_keys = [k.replace(replace[0], replace[1]) for k in weight.keys()]
+        weight = OrderedDict(zip(cur_keys, weight.values()))
     model.load_state_dict(weight, strict=strict)
 
 
-def load_checkpoint_parameters(model, weight_path_prefix, checkpoint_path, enable_cuda=False, strict=False):
+def load_checkpoint_parameters(model, weight_path_prefix, checkpoint_path,
+                               enable_cuda=False, strict=False, replace=()):
     with open(checkpoint_path, 'r') as f:
         checkpoint = f.readlines()[0].strip()
     load_weight_path = weight_path_prefix + '-' + checkpoint
 
     assert os.path.exists(load_weight_path)
-    load_model_parameters(model, load_weight_path, enable_cuda, strict)
+    load_model_parameters(model, load_weight_path, enable_cuda, strict, replace)
 
     return load_weight_path
 
