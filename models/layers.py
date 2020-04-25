@@ -38,6 +38,35 @@ def get_embedding_layer(model_config):
     return embedding_layer
 
 
+class SFU(torch.nn.Module):
+    """
+    Semantic Fusion Unit: one input vector and one fusion vector
+    Args:
+        - input_size:
+        - fusions_size:
+    Inputs:
+        - input: (*, input_size)
+        - fusions: (*, fusions_size)
+    Outputs:
+        - output: (*, input_size)
+    """
+
+    def __init__(self, input_size, fusions_size):
+        super(SFU, self).__init__()
+
+        self.linear_r = torch.nn.Linear(input_size + fusions_size, input_size)
+        self.linear_g = torch.nn.Linear(input_size + fusions_size, input_size)
+
+    def forward(self, input, fusions):
+        m = torch.cat((input, fusions), dim=-1)
+
+        r = torch.tanh(self.linear_r(m))  # (*, input_size)
+        g = torch.sigmoid(self.linear_g(m))  # (*, input_size)
+        o = g * r + (1 - g) * input
+
+        return o
+
+
 class HierarchicalAttention(torch.nn.Module):
     """
     Hierarchical LinearAttention Layer

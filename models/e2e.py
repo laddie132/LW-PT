@@ -7,7 +7,7 @@ __email__ = "liuhan132@foxmail.com"
 """E2E models for multi-label text classification"""
 
 import torch
-from .layers import get_embedding_layer
+from .layers import get_embedding_layer, SFU
 from . import encoder, decoder
 
 
@@ -85,6 +85,7 @@ class LWQT(torch.nn.Module):
             self.cand_doc_encoder = encoder.LWBiRNNEncoder(model_config)
 
         self.decoder = get_decoder(dec, hidden_size, label_size, qt=True, lw=True)
+        # self.sfu = SFU(hidden_size * 2, hidden_size * 2)
 
     def forward(self, doc, *args):
         self.flag = not self.flag
@@ -111,6 +112,8 @@ class LWQT(torch.nn.Module):
         # doc representation: (batch, label_size, hidden_size * 4)
         doc_rep = torch.cat([tar_doc_rep, cand_doc_rep], dim=-1)
         # doc_rep = (tar_doc_rep + cand_doc_rep) / 2
+        # doc_rep = self.sfu(tar_doc_rep, cand_doc_rep)
+
         return self.decoder(doc_rep)
 
 

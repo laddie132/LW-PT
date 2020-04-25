@@ -137,11 +137,23 @@ class BaseDataset:
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 
-        labels_idx = MultiLabelBinarizer().fit_transform(labels_origin)
-        batch, cur_label_size = labels_idx.shape
-        if cur_label_size < len(self.sorted_labels):
-            labels_idx = np.concatenate([np.zeros((batch, len(self.sorted_labels) - cur_label_size), dtype=np.long),
-                                         labels_idx], axis=1)
+        labels_idx = self.fit_labels(labels_origin)
+        return texts_idx, labels_idx
+
+    def t5_data_ave_emb(self, data):
+        labels_origin = []
+        data_size = len(data)
+        texts_idx = np.zeros((data_size, self.emb_dim), dtype=np.long)
+
+        for i, example in tqdm(enumerate(data), total=data_size, desc='transforming...'):
+            exa_text_emb = np.array(list(map(self.word_emb, example[0])), dtype=np.long)
+            exa_text_emb_ave = exa_text_emb.mean(axis=0)
+            texts_idx[i] = exa_text_emb_ave
+
+            exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
+            labels_origin.append(exa_label_idx)
+
+        labels_idx = self.fit_labels(labels_origin)
         return texts_idx, labels_idx
 
     def t5_data_hier(self, data):
@@ -166,12 +178,16 @@ class BaseDataset:
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 
+        labels_idx = self.fit_labels(labels_origin)
+        return texts_idx, labels_idx
+
+    def fit_labels(self, labels_origin):
         labels_idx = MultiLabelBinarizer().fit_transform(labels_origin)
         batch, cur_label_size = labels_idx.shape
         if cur_label_size < len(self.sorted_labels):
             labels_idx = np.concatenate([np.zeros((batch, len(self.sorted_labels) - cur_label_size), dtype=np.long),
                                          labels_idx], axis=1)
-        return texts_idx, labels_idx
+        return labels_idx
 
     def train_emb(self):
         if self.load_emb:
@@ -210,7 +226,7 @@ class BaseDataset:
             pickle.dump(data, f)
 
         logger.info('saving meta-data...')
-        with open(self.save_meta_data_path, 'wb') as f:
+        with open(self.save_meta_data_path, 'w') as f:
             json.dump({**self.attrs, **meta_data}, f, indent=2)
 
     def save_h5(self, data, meta_data):
