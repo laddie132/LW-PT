@@ -4,7 +4,7 @@ dataset:
   h5_path: data/aapd.h5
 #  data_path: data/aapd_hier.pkl
   data_path: data/aapd.pkl
-  meta_data_path: data/aapd.pkl.meta
+  meta_data_path: data/aapd.meta.json
   doc_rep_path: data/aapd_qt_rep.pt
 
 global:

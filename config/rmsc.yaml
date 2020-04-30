@@ -4,7 +4,7 @@ dataset:
   h5_path: data/rmsc.h5
 #  data_path: data/rmsc_non_hier.pkl
   data_path: data/rmsc.pkl
-  meta_data_path: data/rmsc.pkl.meta
+  meta_data_path: data/rmsc.meta.json
   doc_rep_path: data/rmsc_qt_rep.pt-cand3
 
 global:
