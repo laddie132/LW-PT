@@ -1,4 +1,4 @@
-# Label-Wised Quick-Thought (LW-QT)
+# Label-Wised Pre-Training (LW-PT)
 This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Label Text Classiﬁcation](https://)
 
 ## Requirements
@@ -11,7 +11,7 @@ This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Lab
 
 - `--data` and `--outputs`
 
-We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+QT+FT model and HLWAN+QT+FT model to make sure reproducibility. Please download from the [link](https://) and decompress to the root directory of this repository.
+We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLWAN+PT+FT model to make sure reproducibility. Please download from the [link](https://) and decompress to the root directory of this repository.
 
 ```
 --data
