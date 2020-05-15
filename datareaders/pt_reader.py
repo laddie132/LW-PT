@@ -4,7 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-"""Dataset Reader for Quick-Thought on training"""
+"""Dataset Reader for pre-trained on training"""
 
 import h5py
 import pickle
@@ -18,7 +18,7 @@ from utils.functions import del_zeros_right, compute_mask
 logger = logging.getLogger(__name__)
 
 
-class QTReader:
+class PTReader:
     def __init__(self, config):
         self.config = config
         self.num_workers = self.config['global']['num_data_workers']
@@ -57,7 +57,7 @@ class QTReader:
         return self._get_dataloader(self.data['x_valid'], self.data['y_valid'], self.valid_iters)
 
     def _get_dataloader(self, x, y, iters):
-        doc_dataset = QTDataset(x, y, self.cand_doc_size, self.hierarchical)
+        doc_dataset = PTDataset(x, y, self.cand_doc_size, self.hierarchical)
         cur_sampler = torch.utils.data.sampler.RandomSampler(doc_dataset,
                                                              replacement=True,
                                                              num_samples=iters * self.batch_size)
@@ -68,9 +68,9 @@ class QTReader:
                                            collate_fn=doc_dataset.collect_fun)
 
 
-class QTDataset(torch.utils.data.Dataset):
+class PTDataset(torch.utils.data.Dataset):
     def __init__(self, docs, labels, cand_doc_size, hierarchical):
-        super(QTDataset, self).__init__()
+        super(PTDataset, self).__init__()
         self.docs = docs
         self.labels = labels
         self.cand_doc_size = cand_doc_size
@@ -86,15 +86,15 @@ class QTDataset(torch.utils.data.Dataset):
 
         # random select a label as input
         cur_label = self.labels[index]
-        qt_label_idx = random.choice(cur_label.nonzero().squeeze(-1).tolist())
-        qt_label = torch.zeros(self.labels.shape[1], dtype=torch.long)
-        qt_label[qt_label_idx] = 1
+        pt_label_idx = random.choice(cur_label.nonzero().squeeze(-1).tolist())
+        pt_label = torch.zeros(self.labels.shape[1], dtype=torch.long)
+        pt_label[pt_label_idx] = 1
 
         # random generate candidates
-        cand_docs_idx = random.sample(self.diff_docs[qt_label_idx], self.cand_doc_size - 1)
+        cand_docs_idx = random.sample(self.diff_docs[pt_label_idx], self.cand_doc_size - 1)
         tar_doc_idx = index
         while tar_doc_idx == index:
-            tar_doc_idx = random.choice(self.same_docs[qt_label_idx])
+            tar_doc_idx = random.choice(self.same_docs[pt_label_idx])
 
         cand_docs_idx.append(tar_doc_idx)
         random.shuffle(cand_docs_idx)
@@ -102,7 +102,7 @@ class QTDataset(torch.utils.data.Dataset):
 
         cand_docs = self.docs[cand_docs_idx]
 
-        return cur_doc, cand_docs, qt_label, gt_idx
+        return cur_doc, cand_docs, pt_label, gt_idx
 
     def gen_same_diff_docs(self):
         label_size = self.labels.shape[1]
@@ -118,18 +118,18 @@ class QTDataset(torch.utils.data.Dataset):
     def collect_fun(self, batch):
         tar_d = []
         cand_ds = []
-        qt_label = []
+        pt_label = []
         gt_idx = []
 
         for ele in batch:
             tar_d.append(ele[0])
             cand_ds.append(ele[1])
-            qt_label.append(ele[2])
+            pt_label.append(ele[2])
             gt_idx.append(ele[3])
 
         tar_d = torch.stack(tar_d, dim=0)
         cand_ds = torch.stack(cand_ds, dim=0)
-        qt_label = torch.stack(qt_label, dim=0)
+        pt_label = torch.stack(pt_label, dim=0)
         gt_idx = torch.tensor(gt_idx, dtype=torch.long)
 
         # compress on word level
@@ -151,6 +151,6 @@ class QTDataset(torch.utils.data.Dataset):
 
         # logger.info('tar_d: {}, {}'.format(tar_d.dtype, tar_d.shape))
         # logger.info('cand_ds: {}, {}'.format(cand_ds.dtype, cand_ds.shape))
-        # logger.info('label: {}, {}'.format(qt_label.dtype, qt_label.shape))
+        # logger.info('label: {}, {}'.format(pt_label.dtype, pt_label.shape))
 
-        return tar_d, tar_mask, cand_ds, cand_mask, qt_label, gt_idx
+        return tar_d, tar_mask, cand_ds, cand_mask, pt_label, gt_idx

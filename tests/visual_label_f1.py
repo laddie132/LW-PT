@@ -146,7 +146,7 @@ if __name__ == '__main__':
                 metrics_path=['outputs/rmsc/hlwan-mlp-20/metrics.json',
                               'outputs/rmsc/qt-hlwan-ln-c3-8k-mlp-20/metrics.json',
                               'outputs/rmsc/qt-hlwan-ln-c3-8k-ft-mlp-20/metrics.json'],
-                names=['HLWAN', 'HLWAN+QT', 'HLWAN+QT+FT'],
+                names=['HLW-LSTM', 'HLW-LSTM+PT', 'HLW-LSTM+PT+FT'],
                 out_path='data/rmsc_labels_freq_f1.eps',
                 dtype='rmsc')
 
@@ -155,6 +155,6 @@ if __name__ == '__main__':
                 metrics_path=['outputs/aapd/lwlstm-2-mlp-20/metrics.json',
                               'outputs/aapd/qt-lwlstm-2-256-ln-c3-3k-mlp/metrics.json',
                               'outputs/aapd/qt-lwlstm-2-256-ln-c3-3k-ft-mlp/metrics.json'],
-                names=['LW-LSTM', 'LW-LSTM+QT', 'LW-LSTM+QT+FT'],
+                names=['LW-LSTM', 'LW-LSTM+PT', 'LW-LSTM+PT+FT'],
                 out_path='data/aapd_labels_freq_f1.eps',
                 dtype='aapd')

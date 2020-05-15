@@ -69,7 +69,7 @@ def load_test_json(test_path):
 
 
 def find_sim_songs(w2v_path, test_path, topn=10):
-    qt_model = KeyedVectors.load_word2vec_format(w2v_path, binary=False)
+    pt_model = KeyedVectors.load_word2vec_format(w2v_path, binary=False)
     songs_tag = load_test_json(test_path)
 
     example = 'Janes_Addiction_-_Nothings_Shocking'
@@ -79,7 +79,7 @@ def find_sim_songs(w2v_path, test_path, topn=10):
     ]
 
     print(example, exp_tags)
-    sim_names = qt_model.most_similar(example, topn=topn)
+    sim_names = pt_model.most_similar(example, topn=topn)
 
     tag_num = {}
     for ele in sim_names:
@@ -151,17 +151,17 @@ def show_doc_emb(meta_data_path, doc_rep_path, save_path, nums, dim=0):
 
 if __name__ == '__main__':
     # transform_w2v(meta_data_path='data/rmsc.pkl.meta-label',
-    #               doc_rep_path='data/rmsc_qt_rep.pt-cand3',
-    #               save_path='data/rmsc_qt_rep.dim11.test.w2v',
+    #               doc_rep_path='data/rmsc_pt_rep.pt-cand3',
+    #               save_path='data/rmsc_pt_rep.dim11.test.w2v',
     #               dim=11)
-    find_sim_songs('data/rmsc_qt_rep.dim0.test.w2v',
+    find_sim_songs('data/rmsc_pt_rep.dim0.test.w2v',
                    test_path='data/rmsc/rmsc.data.test.json',
                    topn=50)
     # transform_tsv(meta_data_path='data/rmsc.pkl.meta',
-    #               doc_rep_path='data/rmsc_qt_rep.pt-cand3',
-    #               save_path='data/rmsc_qt_rep.test.tsv')
+    #               doc_rep_path='data/rmsc_pt_rep.pt-cand3',
+    #               save_path='data/rmsc_pt_rep.test.tsv')
     # show_doc_emb(meta_data_path='data/rmsc.pkl.meta',
-    #              doc_rep_path='data/rmsc_qt_rep.pt-cand3',
-    #              save_path='data/rmsc_qt_rep.test.png',
+    #              doc_rep_path='data/rmsc_pt_rep.pt-cand3',
+    #              save_path='data/rmsc_pt_rep.test.png',
     #              nums=50)
     # show_whatlies()

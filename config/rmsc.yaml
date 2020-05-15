@@ -5,7 +5,7 @@ dataset:
 #  data_path: data/rmsc_non_hier.pkl
   data_path: data/rmsc.pkl
   meta_data_path: data/rmsc.meta.json
-  doc_rep_path: data/rmsc_qt_rep.pt-cand3
+  doc_rep_path: data/rmsc_pt_rep.pt
 
 global:
   random_seed: 123
@@ -17,7 +17,7 @@ global:
   cand_doc_size: 3
 
 model:
-  name: LWQT    # CNN, RNN, LWAN, LWQT
+  name: LWPT    # CNN, RNN, LWAN, LWPT
   decoder: MLP  # Linear, MLP, LW, LG, LWLG
   hierarchical: True  # same as dataset
   fine_tune: True

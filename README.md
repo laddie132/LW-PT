@@ -11,7 +11,7 @@ This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Lab
 
 - `--data` and `--outputs`
 
-We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLWAN+PT+FT model to make sure reproducibility. Please download from the [link](https://) and decompress to the root directory of this repository.
+We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLW-LSTM+PT+FT model to make sure reproducibility. Please download from the [link](https://) and decompress to the root directory of this repository.
 
 ```
 --data
@@ -57,7 +57,7 @@ PYTHONHASHSEED=1 python preprocess.py -data=[RMSC/AAPD]
 
 ## Pre-Train
 
-Pre-train the LW-QT model.
+Pre-train the LW-PT model.
 
 ``` bash
 python pretrain.py -config=[CONFIG_NAME] -out=[OUT_INFIX] -gpuid [GPU_ID] -train -test

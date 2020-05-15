@@ -1,11 +1,11 @@
 # config file
 
 dataset:
-  h5_path: data/aapd.h5
-#  data_path: data/aapd_hier.pkl
-  data_path: data/aapd.pkl
-  meta_data_path: data/aapd.meta.json
-  doc_rep_path: data/aapd_pt_rep.pt
+  h5_path: data/rcv1v2.h5
+#  data_path: data/rcv1v2_hier.pkl
+  data_path: data/rcv1v2.pkl
+  meta_data_path: data/rcv1v2.meta.json
+  doc_rep_path: data/rcv1v2_pt_rep.pt
 
 global:
   random_seed: 123
@@ -20,18 +20,18 @@ model:
   name: LWPT    # CNN, RNN, LWAN, LWPT
   decoder: MLP  # Linear, MLP, LW, LG, LWLG
   hierarchical: False  # same as dataset
-  fine_tune: True
+  fine_tune: False
 
-  use_pretrain: True
-  embedding_num: 50000
+  use_pretrain: False
+  embedding_num: 50010
   embedding_dim: 256
-  embedding_path: data/aapd_word2vec.model.wv.vectors.npy
+  embedding_path: None
   embedding_freeze: True
 
   cell: LSTM
   num_layers: 2
   hidden_size: 256
-  label_size: 54    # different with dataset
+  label_size: 103    # different with dataset
   dropout_p: 0.2
   layer_norm: true
 
@@ -41,7 +41,7 @@ train:
   valid_iters: 50
   test_iters: 1000
 
-  eval_steps: 100
+  eval_steps: 100    # TODO: valid dataloader locked
   save_steps: 1000
 
   batch_size: 128

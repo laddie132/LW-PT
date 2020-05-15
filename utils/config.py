@@ -94,11 +94,11 @@ def read_config(config_path='config/config.yaml', in_infix='default', out_infix=
         in_prefix = 'outputs/' + in_infix + '/'
         assert os.path.exists(in_prefix)
 
-        checkpoint = {'qt_log_path': out_prefix + 'qt_logs',
-                      'in_qt_weight_path': in_prefix + 'qt_weight.pt',
-                      'in_qt_checkpoint_path': in_prefix + 'qt_checkpoint',
-                      'out_qt_weight_path': out_prefix + 'qt_weight.pt',
-                      'out_qt_checkpoint_path': out_prefix + 'qt_checkpoint',
+        checkpoint = {'pt_log_path': out_prefix + 'qt_logs',
+                      'in_pt_weight_path': in_prefix + 'qt_weight.pt',
+                      'in_pt_checkpoint_path': in_prefix + 'qt_checkpoint',
+                      'out_pt_weight_path': out_prefix + 'qt_weight.pt',
+                      'out_pt_checkpoint_path': out_prefix + 'qt_checkpoint',
                       'cls_log_path': out_prefix + 'cls_logs',
                       'in_cls_weight_path': in_prefix + 'cls_weight.pt',
                       'in_cls_checkpoint_path': in_prefix + 'cls_checkpoint',

@@ -12,7 +12,7 @@ import torch
 import torch.nn
 import torch.multiprocessing
 import logging
-from models import DAQTRep
+from models import LWPTRep
 from datareaders import DocClsReader
 from utils.config import init_logging, init_env
 
@@ -23,13 +23,13 @@ def main(config_path, in_infix, out_infix, gpuid):
     logger.info('-------------Doc-Rep Pre-building---------------')
     logger.info('initial environment...')
     config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                   writer_suffix='qt_log_path', gpuid=gpuid)
+                                                   writer_suffix='pt_log_path', gpuid=gpuid)
 
     logger.info('reading dataset...')
     dataset = DocClsReader(config)
 
     logger.info('constructing model...')
-    doc_rep_module = DAQTRep(config).to(device)
+    doc_rep_module = LWPTRep(config).to(device)
     doc_rep_module.load_parameters(enable_cuda, force=True, strict=False)
 
     # dataset

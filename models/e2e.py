@@ -39,7 +39,7 @@ class RNN(torch.nn.Module):
             self.encoder = encoder.HANEncoder(model_config)
         else:
             self.encoder = encoder.BiRNNEncoder(model_config)
-        self.decoder = get_decoder(dec, hidden_size, label_size, qt=False, lw=False)
+        self.decoder = get_decoder(dec, hidden_size, label_size, pt=False, lw=False)
 
     def forward(self, doc, *args):
         doc_emb = self.embedding_layer(doc)
@@ -59,16 +59,16 @@ class LWAN(torch.nn.Module):
             self.encoder = encoder.HLWANEncoder(model_config)
         else:
             self.encoder = encoder.LWBiRNNEncoder(model_config)
-        self.decoder = get_decoder(dec, hidden_size, label_size, qt=False, lw=True)
+        self.decoder = get_decoder(dec, hidden_size, label_size, pt=False, lw=True)
 
     def forward(self, doc, *args):
         doc_emb = self.embedding_layer(doc)
         return self.decoder(self.encoder(doc_emb, *args)[0])
 
 
-class LWQT(torch.nn.Module):
+class LWPT(torch.nn.Module):
     def __init__(self, model_config):
-        super(LWQT, self).__init__()
+        super(LWPT, self).__init__()
         hidden_size = model_config['hidden_size']
         label_size = model_config['label_size']
         hierarchical = model_config['hierarchical']
@@ -84,7 +84,7 @@ class LWQT(torch.nn.Module):
             self.tar_doc_encoder = encoder.LWBiRNNEncoder(model_config)
             self.cand_doc_encoder = encoder.LWBiRNNEncoder(model_config)
 
-        self.decoder = get_decoder(dec, hidden_size, label_size, qt=True, lw=True)
+        self.decoder = get_decoder(dec, hidden_size, label_size, pt=True, lw=True)
         # self.sfu = SFU(hidden_size * 2, hidden_size * 2)
 
     def forward(self, doc, *args):
@@ -117,8 +117,8 @@ class LWQT(torch.nn.Module):
         return self.decoder(doc_rep)
 
 
-def get_decoder(method, hidden_size, label_size, qt, lw):
-    times = 4 if qt else 2
+def get_decoder(method, hidden_size, label_size, pt, lw):
+    times = 4 if pt else 2
     if method == 'Linear':
         input_size = hidden_size * times * label_size if lw else hidden_size * times
         return decoder.LinearMLC(input_size, label_size)

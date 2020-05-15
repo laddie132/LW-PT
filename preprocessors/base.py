@@ -112,12 +112,14 @@ class BaseDataset:
             x_valid, y_valid = self.t5_data_hier(self.raw_texts_labels['valid'])
             x_test, y_test = self.t5_data_hier(self.raw_texts_labels['test'])
 
+        y_train_idx, y_valid_idx, y_test_idx = self.fit_labels(y_train, y_valid, y_test)
+
         data = {'x_train': x_train,
                 'x_valid': x_valid,
                 'x_test': x_test,
-                'y_train': y_train,
-                'y_valid': y_valid,
-                'y_test': y_test}
+                'y_train': y_train_idx,
+                'y_valid': y_valid_idx,
+                'y_test': y_test_idx}
         meta_data = {}
         return data, meta_data
 
@@ -137,8 +139,7 @@ class BaseDataset:
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 
-        labels_idx = self.fit_labels(labels_origin)
-        return texts_idx, labels_idx
+        return texts_idx, labels_origin
 
     def t5_data_ave_emb(self, data):
         labels_origin = []
@@ -153,8 +154,7 @@ class BaseDataset:
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 
-        labels_idx = self.fit_labels(labels_origin)
-        return texts_idx, labels_idx
+        return texts_idx, labels_origin
 
     def t5_data_hier(self, data):
         labels_origin = []
@@ -178,16 +178,16 @@ class BaseDataset:
             exa_label_idx = np.array(list(map(self.label_index, example[1])), dtype=np.long)
             labels_origin.append(exa_label_idx)
 
-        labels_idx = self.fit_labels(labels_origin)
-        return texts_idx, labels_idx
+        return texts_idx, labels_origin
 
-    def fit_labels(self, labels_origin):
+    def fit_labels(self, y_train, y_valid, y_test):
+        labels_origin = y_train + y_valid + y_test
         labels_idx = MultiLabelBinarizer().fit_transform(labels_origin)
-        batch, cur_label_size = labels_idx.shape
-        if cur_label_size < len(self.sorted_labels):
-            labels_idx = np.concatenate([np.zeros((batch, len(self.sorted_labels) - cur_label_size), dtype=np.long),
-                                         labels_idx], axis=1)
-        return labels_idx
+
+        y_train_idx = labels_idx[:len(y_train)]
+        y_valid_idx = labels_idx[len(y_train):len(y_train)+len(y_valid)]
+        y_test_idx = labels_idx[len(y_train)+len(y_valid):]
+        return y_train_idx, y_valid_idx, y_test_idx
 
     def train_emb(self):
         if self.load_emb:
@@ -211,6 +211,7 @@ class BaseDataset:
         return self.word2vec[word]
 
     def word_index(self, word):
+        # return word
         return self.word2vec.wv.vocab[word].index + 1  # padding index on zero
 
     def label_index(self, tag):

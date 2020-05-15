@@ -52,6 +52,9 @@ class RCV1V2(BaseDataset):
                     label = list(map(lambda x: int(x), label.strip().split()))
                     label = label[1:-1]
 
+                    # text = text.strip().split()
+                    # label = label.strip().split()
+
                     self.texts_labels_sum += len(label)
                     self.texts_words_sum += len(text)
 

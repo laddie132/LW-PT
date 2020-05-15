@@ -4,7 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-"""Dataset Reader for classification based on Quick-Thought representation"""
+"""Dataset Reader for classification based on pre-trained representation"""
 
 import pickle
 import torch

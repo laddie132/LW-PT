@@ -4,7 +4,7 @@
 __author__ = "Han"
 __email__ = "liuhan132@foxmail.com"
 
-"""DA-QT Module"""
+"""LW-PT Module"""
 
 import torch
 import logging
@@ -15,23 +15,23 @@ from .layers import get_embedding_layer
 logger = logging.getLogger(__name__)
 
 
-class DAQT(BaseModule):
+class LWPT(BaseModule):
     def __init__(self, config):
-        super(DAQT, self).__init__(
+        super(LWPT, self).__init__(
             config,
-            name='qt',
-            model=DocRepQTTrainModel(config['model']))
+            name='pt',
+            model=LWPTTrainModel(config['model']))
 
 
-class DAQTRep(BaseModule):
+class LWPTRep(BaseModule):
     def __init__(self, config):
-        super(DAQTRep, self).__init__(
+        super(LWPTRep, self).__init__(
             config,
-            name='qt',
-            model=DocRepQTTestModel(config['model']))
+            name='pt',
+            model=LWPTTestModel(config['model']))
 
 
-class DocRepQTTrainModel(torch.nn.Module):
+class LWPTTrainModel(torch.nn.Module):
     """
     Documents representation model
     Args:
@@ -44,7 +44,7 @@ class DocRepQTTrainModel(torch.nn.Module):
     """
 
     def __init__(self, model_config):
-        super(DocRepQTTrainModel, self).__init__()
+        super(LWPTTrainModel, self).__init__()
         hierarchical = model_config['hierarchical']
         self.embedding_layer = get_embedding_layer(model_config)
         if hierarchical:
@@ -91,7 +91,7 @@ class DocRepQTTrainModel(torch.nn.Module):
         return cand_logits
 
 
-class DocRepQTTestModel(torch.nn.Module):
+class LWPTTestModel(torch.nn.Module):
     """
     Documents representation out model
     Args:
@@ -103,7 +103,7 @@ class DocRepQTTestModel(torch.nn.Module):
     """
 
     def __init__(self, model_config):
-        super(DocRepQTTestModel, self).__init__()
+        super(LWPTTestModel, self).__init__()
         hierarchical = model_config['hierarchical']
         self.embedding_layer = get_embedding_layer(model_config)
         if hierarchical:

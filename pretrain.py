@@ -9,8 +9,8 @@ import torch
 import torch.nn
 import logging
 from tqdm import tqdm
-from models import DAQT
-from datareaders import QTReader
+from models import LWPT
+from datareaders import PTReader
 from utils.optims import Optim
 from utils.config import init_logging, init_env
 from utils.metrics import evaluate_acc
@@ -19,15 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 def main(config_path, in_infix, out_infix, is_train, is_test, gpuid):
-    logger.info('-------------DA-QT Pre-Training---------------')
+    logger.info('-------------LW-PT Pre-Training---------------')
     logger.info('initial environment...')
     config, enable_cuda, device, writer = init_env(config_path, in_infix, out_infix,
-                                                   writer_suffix='qt_log_path', gpuid=gpuid)
+                                                   writer_suffix='pt_log_path', gpuid=gpuid)
     logger.info('reading dataset...')
-    dataset = QTReader(config)
+    dataset = PTReader(config)
 
     logger.info('constructing model...')
-    model = DAQT(config).to(device)
+    model = LWPT(config).to(device)
     model.load_parameters(enable_cuda)
 
     # loss function

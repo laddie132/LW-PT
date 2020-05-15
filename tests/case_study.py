@@ -81,5 +81,5 @@ if __name__ == '__main__':
     combine_predicts(pred_path_lst=['outputs/rmsc/hlwan-cls-20/predict.json',
                                     'outputs/rmsc/qt-hlwan-ln-c3-8k-mlp-20-test-0.9/predict.json',
                                     'outputs/rmsc/qt-hlwan-ln-c3-8k-ft-mlp-20-test-0.8/predict.json'],
-                     name_lst=['hlwan', 'hlwan-qt', 'hlwan-qt-ft'],
+                     name_lst=['hlw-lstm', 'hlw-lstm-pt', 'hlw-lstm-pt-ft'],
                      save_path='data/rmsc_case_study.json')

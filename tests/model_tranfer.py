@@ -41,7 +41,7 @@ def main(pre_model_path, tar_model_path):
     config = read_config('config/rmsc.yaml')
 
     logger.info('constructing model...')
-    model = DAQT(config)
+    model = LWPT(config)
 
     logging.info("transforming model from '%s' to '%s'..." % (pre_model_path, tar_model_path))
     transform(pre_model_path, tar_model_path, model)
