@@ -1,5 +1,5 @@
 # Label-Wise Pre-Training (LW-PT)
-This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Label Text Classification](https://)
+This is the code for NLPCC 2020 paper [Label-Wised Document Pre-Training for Multi-Label Text Classification](https://)
 
 ## Requirements
 
