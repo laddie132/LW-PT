@@ -1,5 +1,5 @@
-# Label-Wised Pre-Training (LW-PT)
-This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Label Text Classiﬁcation](https://)
+# Label-Wise Pre-Training (LW-PT)
+This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Label Text Classification](https://)
 
 ## Requirements
 
@@ -11,7 +11,7 @@ This is the code for 2020 paper [Label-Wised Document Pre-Training for Multi-Lab
 
 - `--data` and `--outputs`
 
-We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLW-LSTM+PT+FT model to make sure reproducibility. Please download from the [link](https://) and decompress to the root directory of this repository.
+We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLW-LSTM+PT+FT model to make sure reproducibility. Please download from the [link](https://mega.nz/file/dLgFTAjB#vgfRg3IcaB17I4iKfgU5aYORabogc5mc2-QiYFvFLs8) and decompress to the root directory of this repository.
 
 ```
 --data
@@ -94,5 +94,10 @@ python build_doc_rep.py -config=[CONFIG_NAME] -in=[IN_INFIX] -gpuid [GPU_ID]
 If you consider our work useful, please cite the paper:
 
 ```
-TODO
+@inproceedings{liu2020label,
+	title="Label-Wise Document Pre-Training for Multi-Label Text Classification",
+	author="Han Liu, Caixia Yuan and Xiaojie Wang",
+	booktitle="CCF International Conference on Natural Language Processing and Chinese Computing",
+	year="2020"
+}
 ```
