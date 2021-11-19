@@ -11,7 +11,7 @@ This is the code for NLPCC 2020 paper [Label-Wised Document Pre-Training for Mul
 
 - `--data` and `--outputs`
 
-We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLW-LSTM+PT+FT model to make sure reproducibility. Please download from the [link](https://mega.nz/file/dLgFTAjB#vgfRg3IcaB17I4iKfgU5aYORabogc5mc2-QiYFvFLs8) and decompress to the root directory of this repository.
+We provide the proprecessed RMSC and AAPD datasets and pretrained checkpoints of LW-LSTM+PT+FT model and HLW-LSTM+PT+FT model to make sure reproducibility. Please download from the [link](https://drive.google.com/file/d/1YWCYCh9VzezuhthrTytN5IDdkwYW1kqx/view?usp=sharing) and decompress to the root directory of this repository.
 
 ```
 --data
